@@ -1,0 +1,35 @@
+<!-- create-post.wxml -->
+<view class="container">
+  <view class="card">
+    <view class="title">发布帖子</view>
+    
+    <form bindsubmit="createPost">
+      <view class="form-group">
+        <input class="input" placeholder="请输入帖子标题" name="title" value="{{title}}" bindinput="inputChange" data-field="title" />
+      </view>
+      
+      <view class="form-group">
+        <view class="subtitle">选择分类</view>
+        <picker bindchange="bindCategoryChange" value="{{categoryIndex}}" range="{{categoryNames}}" range-key="name">
+          <view class="input" style="border: 2rpx solid #e0e0e0; border-radius: 8rpx; padding: 16rpx;">
+            {{selectedCategory.name || '请选择分类'}}
+          </view>
+        </picker>
+      </view>
+      
+      <view class="form-group">
+        <textarea class="textarea" placeholder="请输入帖子内容" name="content" value="{{content}}" bindinput="inputChange" data-field="content"></textarea>
+      </view>
+      
+      <view class="form-group">
+        <button class="btn-secondary" bindtap="generateSummary" style="margin-top: 0;">生成摘要</button>
+        <view class="mt-2">
+          <view class="subtitle">摘要（AI生成）</view>
+          <input class="input" placeholder="AI将自动生成摘要" value="{{summary}}" readonly />
+        </view>
+      </view>
+      
+      <button class="btn-primary" form-type="submit" loading="{{loading}}">发布帖子</button>
+    </form>
+  </view>
+</view>

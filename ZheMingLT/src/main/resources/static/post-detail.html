@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>择明论坛 - 帖子详情</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #4a6fa5;
+        }
+        .navbar-brand {
+            color: white;
+            font-weight: bold;
+        }
+        .nav-link {
+            color: white;
+        }
+        .nav-link:hover {
+            color: #e6e6e6;
+        }
+        .post-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .post-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .post-meta {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .post-content {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .post-actions {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .action-btn {
+            margin-right: 30px;
+            color: #666;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .action-btn:hover {
+            color: #4a6fa5;
+        }
+        .action-btn.active {
+            color: #4a6fa5;
+        }
+        .comments-section {
+            margin-top: 40px;
+        }
+        .comments-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .comment-form {
+            margin-bottom: 30px;
+        }
+        .comment-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .comment-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .comment-time {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+        .comment-content {
+            margin-bottom: 10px;
+        }
+        .comment-actions {
+            font-size: 14px;
+        }
+        .reply-btn {
+            color: #4a6fa5;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .reply-form {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+        .reply-item {
+            margin-top: 15px;
+            margin-left: 30px;
+            padding: 10px;
+            background-color: #f0f2f5;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">择明论坛</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="userInfo">用户中心</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logout">退出登录</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 帖子详情 -->
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="post-container">
+                    <h1 class="post-title" id="postTitle"></h1>
+                    <div class="post-meta" id="postMeta"></div>
+                    <div class="post-content" id="postContent"></div>
+                    
+                    <!-- 帖子操作 -->
+                    <div class="post-actions">
+                        <a href="#" class="action-btn" id="likeBtn">
+                            <svg width="18" height="18" fill="currentColor" class="bi bi-heart" viewBox="0 0 16 16">
+                                <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/>
+                            </svg> <span id="likeCount">0</span>
+                        </a>
+                        <a href="#" class="action-btn">
+                            <svg width="18" height="18" fill="currentColor" class="bi bi-share" viewBox="0 0 16 16">
+                                <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
+                            </svg> 分享
+                        </a>
+                        <a href="#" class="action-btn">
+                            <svg width="18" height="18" fill="currentColor" class="bi bi-bookmark" viewBox="0 0 16 16">
+                                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+                            </svg> 收藏
+                        </a>
+                    </div>
+
+                    <!-- 评论区 -->
+                    <div class="comments-section">
+                        <h3 class="comments-title">评论 (<span id="commentCount">0</span>)</h3>
+                        
+                        <!-- 评论表单 -->
+                        <div class="comment-form">
+                            <div class="form-group">
+                                <textarea class="form-control" id="commentContent" rows="4" placeholder="写下你的评论..."></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="submitComment">发布评论</button>
+                        </div>
+
+                        <!-- 评论列表 -->
+                        <div id="commentList">
+                            <!-- 评论将通过JS动态加载 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mt-5">
+                    <div class="card-header">
+                        <h5>作者信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <img src="https://via.placeholder.com/100" alt="头像" class="rounded-circle mb-3">
+                            <h6 id="authorName"></h6>
+                            <p class="text-muted" id="authorMeta"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>相关推荐</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group" id="relatedPosts">
+                            <!-- 相关帖子将通过JS动态加载 -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 检查登录状态
+        function checkLogin() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return token;
+        }
+
+        // 加载帖子详情
+        function loadPostDetail() {
+            const postId = getUrlParam('id');
+            if (!postId) {
+                alert('帖子ID不存在');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const token = checkLogin();
+            if (!token) return;
+
+            fetch(`http://localhost:8080/api/posts/${postId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const post = data.data;
+                    document.getElementById('postTitle').textContent = post.title;
+                    document.getElementById('postContent').textContent = post.content;
+                    document.getElementById('likeCount').textContent = post.likeCount;
+                    document.getElementById('commentCount').textContent = post.commentCount;
+                    document.getElementById('authorName').textContent = post.username;
+                    
+                    document.getElementById('postMeta').innerHTML = `
+                        <span>作者：${post.username}</span>
+                        <span class="mx-2">|</span>
+                        <span>分类：${post.categoryName}</span>
+                        <span class="mx-2">|</span>
+                        <span>发布时间：${post.createdAt}</span>
+                        <span class="mx-2">|</span>
+                        <span>浏览量：${post.viewCount}</span>
+                    `;
+
+                    document.getElementById('authorMeta').innerHTML = `
+                        发布了 ${post.username} 的帖子
+                    `;
+                }
+            });
+        }
+
+        // 加载评论
+        function loadComments() {
+            const postId = getUrlParam('id');
+            if (!postId) return;
+
+            fetch(`http://localhost:8080/api/comments?postId=${postId}&page=1&size=20`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const commentList = document.getElementById('commentList');
+                        commentList.innerHTML = '';
+
+                        data.data.list.forEach(comment => {
+                            const commentItem = document.createElement('div');
+                            commentItem.className = 'comment-item';
+                            commentItem.innerHTML = `
+                                <div class="comment-author">${comment.username}</div>
+                                <div class="comment-time">${comment.createdAt}</div>
+                                <div class="comment-content">${comment.content}</div>
+                                <div class="comment-actions">
+                                    <a href="#" class="reply-btn" onclick="showReplyForm(${comment.id})"><svg width="14" height="14" fill="currentColor" class="bi bi-reply" viewBox="0 0 16 16">
+                                        <path d="M6.598 5.013a.144.144 0 0 1 .202.134V6.3a.5.5 0 0 0 .5.5c.667 0 2.013.005 3.3.822.984.608 1.99 1.772 2.595 3.821C15.337 10.647 16 11.97 16 13.5A1.5 1.5 0 0 1 14.5 15a1.5 1.5 0 0 1-1.5-1.5c0-1.538-.867-2.942-2.177-3.818a8.74 8.74 0 0 0-2.338-.622H7.828a.5.5 0 0 0-.5.5v.615a.145.145 0 0 1-.202.134l-1.411-.94a.445.445 0 0 0-.576.09l-1.528 3.825a.45.45 0 0 0 .16.602.45.45 0 0 0 .602-.16l1.528-3.826a.445.445 0 0 0-.09-.576l-1.411-.94Z"/>
+                                    </svg> 回复</a>
+                                </div>
+                                <div class="reply-form d-none" id="replyForm-${comment.id}">
+                                    <div class="form-group">
+                                        <textarea class="form-control" rows="2" placeholder="写下你的回复..."></textarea>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="submitReply(${comment.id})")">回复</button>
+                                </div>
+                            `;
+                            commentList.appendChild(commentItem);
+
+                            // 加载回复
+                            if (comment.replies && comment.replies.length > 0) {
+                                comment.replies.forEach(reply => {
+                                    const replyItem = document.createElement('div');
+                                    replyItem.className = 'reply-item';
+                                    replyItem.innerHTML = `
+                                        <div class="comment-author">${reply.username}</div>
+                                        <div class="comment-time">${reply.createdAt}</div>
+                                        <div class="comment-content">${reply.content}</div>
+                                    `;
+                                    commentItem.appendChild(replyItem);
+                                });
+                            }
+                        });
+                    }
+                });
+        }
+
+        // 显示回复表单
+        function showReplyForm(commentId) {
+            const replyForm = document.getElementById(`replyForm-${commentId}`);
+            replyForm.classList.toggle('d-none');
+        }
+
+        // 提交回复
+        function submitReply(commentId) {
+            const replyForm = document.getElementById(`replyForm-${commentId}`);
+            const content = replyForm.querySelector('textarea').value;
+            if (!content) {
+                alert('请输入回复内容');
+                return;
+            }
+
+            const token = checkLogin();
+            if (!token) return;
+
+            const postId = getUrlParam('id');
+            fetch('http://localhost:8080/api/comments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    content: content,
+                    parentId: commentId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    replyForm.classList.add('d-none');
+                    replyForm.querySelector('textarea').value = '';
+                    loadComments();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        // 提交评论
+        document.getElementById('submitComment').addEventListener('click', function() {
+            const content = document.getElementById('commentContent').value;
+            if (!content) {
+                alert('请输入评论内容');
+                return;
+            }
+
+            const token = checkLogin();
+            if (!token) return;
+
+            const postId = getUrlParam('id');
+            fetch('http://localhost:8080/api/comments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    content: content,
+                    parentId: 0
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    document.getElementById('commentContent').value = '';
+                    loadComments();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+
+        // 点赞
+        document.getElementById('likeBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const token = checkLogin();
+            if (!token) return;
+
+            const postId = getUrlParam('id');
+            fetch('http://localhost:8080/api/likes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    commentId: null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    document.getElementById('likeBtn').classList.add('active');
+                    const likeCount = parseInt(document.getElementById('likeCount').textContent);
+                    document.getElementById('likeCount').textContent = likeCount + 1;
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+
+        // 加载相关帖子
+        function loadRelatedPosts() {
+            const postId = getUrlParam('id');
+            if (!postId) return;
+
+            fetch('http://localhost:8080/api/posts?page=1&size=5')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const relatedPosts = document.getElementById('relatedPosts');
+                        relatedPosts.innerHTML = '';
+
+                        data.data.list.forEach(post => {
+                            if (post.id != postId) {
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item';
+                                li.innerHTML = `<a href="post-detail.html?id=${post.id}">${post.title}</a>`;
+                                relatedPosts.appendChild(li);
+                            }
+                        });
+                    }
+                });
+        }
+
+        // 加载用户信息
+        function loadUserInfo() {
+            const token = checkLogin();
+            if (!token) return;
+
+            fetch('http://localhost:8080/api/users/info', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    document.getElementById('userInfo').textContent = data.data.username;
+                }
+            });
+        }
+
+        // 退出登录
+        document.getElementById('logout').addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        });
+
+        // 页面加载完成后执行
+        window.onload = function() {
+            checkLogin();
+            loadPostDetail();
+            loadComments();
+            loadRelatedPosts();
+            loadUserInfo();
+        };
+    </script>
+</body>
+</html>

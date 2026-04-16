@@ -1,0 +1,26 @@
+<!-- register.wxml -->
+<view class="container">
+  <view class="card">
+    <view class="text-center" style="margin-bottom: 48rpx;">
+      <text class="title">择明论坛</text>
+      <text class="subtitle">智能论坛，连接你我</text>
+    </view>
+    
+    <form bindsubmit="register">
+      <view class="form-group">
+        <input class="input" placeholder="请输入用户名" name="username" value="{{username}}" bindinput="inputChange" data-field="username" />
+      </view>
+      <view class="form-group">
+        <input class="input" type="password" placeholder="请输入密码" name="password" value="{{password}}" bindinput="inputChange" data-field="password" />
+      </view>
+      <view class="form-group">
+        <input class="input" type="email" placeholder="请输入邮箱" name="email" value="{{email}}" bindinput="inputChange" data-field="email" />
+      </view>
+      <view class="form-group">
+        <input class="input" type="number" placeholder="请输入手机号" name="phone" value="{{phone}}" bindinput="inputChange" data-field="phone" />
+      </view>
+      <button class="btn-primary" form-type="submit" loading="{{loading}}">注册</button>
+      <navigator url="/pages/login/login" class="text-center" style="margin-top: 24rpx; font-size: 28rpx; color: #4a6fa5;">已有账号？立即登录</navigator>
+    </form>
+  </view>
+</view>

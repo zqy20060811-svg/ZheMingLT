@@ -1,0 +1,37 @@
+<!-- login.wxml -->
+<view class="container" data-theme="{{theme}}">
+  <!-- 主题切换按钮 -->
+  <view class="theme-toggle" bindtap="toggleTheme">
+    <text class="theme-icon">{{theme === 'light' ? '🌙' : '☀️'}}</text>
+  </view>
+  
+  <view class="card">
+    <view class="text-center" style="margin-bottom: 48rpx;">
+      <text class="title">择明论坛</text>
+      <text class="subtitle">智能论坛，连接你我</text>
+    </view>
+    
+    <form bindsubmit="login">
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">👤</text>
+          <input class="input" placeholder="请输入用户名" placeholder-class="placeholder" name="username" value="{{username}}" bindinput="inputChange" data-field="username" />
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">🔒</text>
+          <input class="input" type="password" placeholder="请输入密码" placeholder-class="placeholder" name="password" value="{{password}}" bindinput="inputChange" data-field="password" />
+        </view>
+      </view>
+      <button class="btn-primary" form-type="submit" loading="{{loading}}">登录</button>
+      <navigator url="/pages/register/register" class="text-center" style="margin-top: 24rpx; font-size: 28rpx; color: var(--primary-color);">还没有账号？立即注册</navigator>
+    </form>
+  </view>
+  
+  <!-- 快速登录提示 -->
+  <view class="login-tip">
+    <text style="font-size: 24rpx; color: var(--text-secondary);">测试账号：root</text>
+    <text style="font-size: 24rpx; color: var(--text-secondary);">密码：123456</text>
+  </view>
+</view>
