@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/hot/hot",
+    "pages/category/category",
+    "pages/profile/profile",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/post-detail/post-detail",
+    "pages/create-post/create-post",
+    "pages/category-detail/category-detail"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#4a6fa5",
+    "navigationBarTitleText": "择明论坛",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png"
+      },
+      {
+        "pagePath": "pages/hot/hot",
+        "text": "热门",
+        "iconPath": "images/hot.png",
+        "selectedIconPath": "images/hot-active.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类",
+        "iconPath": "images/category.png",
+        "selectedIconPath": "images/category-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/profile.png",
+        "selectedIconPath": "images/profile-active.png"
+      }
+    ],
+    "backgroundColor": "#ffffff",
+    "selectedColor": "#4a6fa5",
+    "color": "#666666",
+    "borderStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json"
+}

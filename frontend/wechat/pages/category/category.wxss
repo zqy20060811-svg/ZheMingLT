@@ -1,0 +1,186 @@
+.category-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  padding-bottom: 40rpx;
+}
+
+.dark-mode {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* 分类网格 */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24rpx;
+  padding: 32rpx;
+}
+
+.category-card {
+  border-radius: 32rpx;
+  padding: 40rpx;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.card-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon .icon {
+  font-size: 48rpx;
+}
+
+.card-info .name {
+  font-size: 32rpx;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.card-info .count {
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+/* 推荐分类 */
+.recommend-section {
+  padding: 0 32rpx 32rpx;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 24rpx;
+}
+
+.dark-mode .section-title {
+  color: #fff;
+}
+
+.section-title .icon {
+  font-size: 36rpx;
+}
+
+.recommend-list {
+  display: flex;
+  gap: 32rpx;
+  overflow-x: auto;
+  padding-bottom: 16rpx;
+}
+
+.recommend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.item-icon {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+}
+
+.item-name {
+  font-size: 26rpx;
+  color: #666;
+  white-space: nowrap;
+}
+
+.dark-mode .item-name {
+  color: #aaa;
+}
+
+/* 全部分类 */
+.all-categories {
+  padding: 0 32rpx;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx;
+  background: white;
+  border-radius: 24rpx;
+}
+
+.dark-mode .list-item {
+  background: #1e1e2e;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.item-icon-small {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.dark-mode .item-title {
+  color: #fff;
+}
+
+.item-desc {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.post-count {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.arrow {
+  color: #ccc;
+  font-size: 32rpx;
+}
