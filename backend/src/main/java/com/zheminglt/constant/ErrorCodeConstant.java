@@ -24,4 +24,12 @@ public final class ErrorCodeConstant {
     public static final int CODE_UNAUTHORIZED = 401;
     public static final int CODE_NOT_FOUND = 404;
     public static final int CODE_CONFLICT = 409;
+
+    // Token相关错误码
+    public static final int CODE_TOKEN_EXPIRED = 401001;  // Token已过期，需要刷新
+    public static final int CODE_TOKEN_INVALID = 401002;  // Token无效
+    public static final int CODE_TOKEN_BLACKLISTED = 401003;  // Token已被拉黑
+
+    // 权限相关错误码
+    public static final int CODE_FORBIDDEN = 403;  // 没有权限
 }

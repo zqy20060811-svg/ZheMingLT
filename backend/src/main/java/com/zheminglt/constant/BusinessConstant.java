@@ -12,8 +12,21 @@ public final class BusinessConstant {
     // ==================== JWT 相关 ====================
     public static final String TOKEN_PREFIX = "Bearer ";
     public static final String TOKEN_HEADER = "Authorization";
-    public static final long TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7天
-    public static final long TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60; // 7天（秒）
+    public static final String REFRESH_TOKEN_HEADER = "X-Refresh-Token";
+
+    // AccessToken: 短期有效，15分钟
+    public static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; // 15分钟
+    public static final long ACCESS_TOKEN_EXPIRATION_SECONDS = 15 * 60; // 15分钟（秒）
+
+    // RefreshToken: 长期有效，7天
+    public static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7天
+    public static final long REFRESH_TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60; // 7天（秒）
+
+    // 旧版兼容（已废弃，使用 ACCESS_TOKEN_EXPIRATION）
+    @Deprecated
+    public static final long TOKEN_EXPIRATION = ACCESS_TOKEN_EXPIRATION;
+    @Deprecated
+    public static final long TOKEN_EXPIRATION_SECONDS = ACCESS_TOKEN_EXPIRATION_SECONDS;
 
     // ==================== 用户角色 ====================
     public static final int ROLE_USER = 0;      // 普通用户

@@ -17,13 +17,16 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(jwtInterceptor)
                 // 需要拦截的路径
                 .addPathPatterns("/users/info", "/users/info/**")
+                .addPathPatterns("/users/stats", "/users/profile")
                 .addPathPatterns("/users/logout")
-                .addPathPatterns("/posts/create", "/posts/update", "/posts/delete")
+                .addPathPatterns("/posts")  // POST /posts 需要拦截
+                .addPathPatterns("/posts/update", "/posts/delete")
                 .addPathPatterns("/comments", "/comments/**")
                 .addPathPatterns("/likes", "/likes/**")
                 .addPathPatterns("/collections", "/collections/**")
                 // 不需要拦截的路径（公开接口）
-                .excludePathPatterns("/users/login", "/users/register")
-                .excludePathPatterns("/posts", "/posts/**", "/categories", "/categories/**");
+                .excludePathPatterns("/users/login", "/users/register", "/users/refresh")
+                .excludePathPatterns("/posts/hot", "/posts/{id}")  // GET /posts/hot 和 GET /posts/{id} 公开
+                .excludePathPatterns("/categories", "/categories/**");
     }
 }

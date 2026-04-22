@@ -8,6 +8,11 @@ import HotView from '@/views/HotView.vue'
 import CategoryView from '@/views/CategoryView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 
+// 获取AccessToken的辅助函数
+function getAccessToken() {
+  return localStorage.getItem('accessToken')
+}
+
 const routes = [
   {
     path: '/',
@@ -90,7 +95,7 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = getAccessToken()
 
   // 需要登录的页面
   if (to.meta.requiresAuth && !token) {

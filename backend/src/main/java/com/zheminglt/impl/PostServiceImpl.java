@@ -25,11 +25,7 @@ public class PostServiceImpl implements PostService {
     public ResponseVO<List<PostVO>> findAll() {
         List<Post> posts = postMapper.findAll();
         List<PostVO> postVOs = posts.stream()
-                .map(post -> {
-                    PostVO postVO = new PostVO();
-                    BeanUtils.copyProperties(post, postVO);
-                    return postVO;
-                })
+                .map(post -> convertToVO(post))
                 .collect(Collectors.toList());
         return ResponseVO.success(postVOs);
     }
@@ -38,13 +34,22 @@ public class PostServiceImpl implements PostService {
     public ResponseVO<List<PostVO>> findHot() {
         List<Post> posts = postMapper.findAll();
         List<PostVO> postVOs = posts.stream()
-                .map(post -> {
-                    PostVO postVO = new PostVO();
-                    BeanUtils.copyProperties(post, postVO);
-                    return postVO;
-                })
+                .map(post -> convertToVO(post))
                 .collect(Collectors.toList());
         return ResponseVO.success(postVOs);
+    }
+
+    private PostVO convertToVO(Post post) {
+        PostVO postVO = new PostVO();
+        BeanUtils.copyProperties(post, postVO);
+        // 手动设置作者名称和分类名称
+        if (post.getUser() != null) {
+            postVO.setAuthorName(post.getUser().getUsername());
+        }
+        if (post.getCategory() != null) {
+            postVO.setCategoryName(post.getCategory().getName());
+        }
+        return postVO;
     }
 
     @Override
@@ -57,18 +62,39 @@ public class PostServiceImpl implements PostService {
         // 暂时注释掉，避免getViewCount方法不存在的问题
         // post.setViewCount(post.getViewCount() + 1);
         // postMapper.save(post);
-        PostVO postVO = new PostVO();
-        BeanUtils.copyProperties(post, postVO);
+        PostVO postVO = convertToVO(post);
         return ResponseVO.success(postVO);
     }
 
     @Override
     public ResponseVO<PostVO> create(Post post) {
-        post.setStatus(BusinessConstant.POST_STATUS_PUBLISHED);
-        Post savedPost = postMapper.save(post);
-        PostVO postVO = new PostVO();
-        BeanUtils.copyProperties(savedPost, postVO);
-        return ResponseVO.success(postVO);
+        try {
+            post.setStatus(BusinessConstant.POST_STATUS_PUBLISHED);
+            // 设置默认值
+            if (post.getViewCount() == null) {
+                post.setViewCount(0);
+            }
+            if (post.getLikeCount() == null) {
+                post.setLikeCount(0);
+            }
+            if (post.getCommentCount() == null) {
+                post.setCommentCount(0);
+            }
+            Post savedPost = postMapper.save(post);
+            PostVO postVO = new PostVO();
+            BeanUtils.copyProperties(savedPost, postVO);
+            // 手动设置作者名称和分类名称
+            if (savedPost.getUser() != null) {
+                postVO.setAuthorName(savedPost.getUser().getUsername());
+            }
+            if (savedPost.getCategory() != null) {
+                postVO.setCategoryName(savedPost.getCategory().getName());
+            }
+            return ResponseVO.success(postVO);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseVO.error(ErrorCodeConstant.CODE_ERROR, "创建帖子失败: " + e.getMessage());
+        }
     }
 
     @Override

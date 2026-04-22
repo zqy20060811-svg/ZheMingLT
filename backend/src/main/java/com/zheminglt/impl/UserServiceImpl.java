@@ -8,16 +8,35 @@ import com.zheminglt.dto.UserDTO;
 import com.zheminglt.mapper.UserMapper;
 import com.zheminglt.mapper.PostMapper;
 import com.zheminglt.mapper.LikeMapper;
+import com.zheminglt.mapper.CollectionMapper;
+import com.zheminglt.mapper.CommentMapper;
+import com.zheminglt.mapper.CategoryMapper;
 import com.zheminglt.model.User;
+import com.zheminglt.model.Post;
+import com.zheminglt.model.Like;
+import com.zheminglt.model.Collection;
+import com.zheminglt.model.Comment;
+import com.zheminglt.model.Category;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.service.UserService;
 import com.zheminglt.vo.LoginVO;
 import com.zheminglt.vo.UserVO;
 import com.zheminglt.vo.UserStatsVO;
 import com.zheminglt.vo.ResponseVO;
+import com.zheminglt.vo.PageVO;
+import com.zheminglt.vo.UserLikeVO;
+import com.zheminglt.vo.UserCollectionVO;
+import com.zheminglt.vo.PostVO;
+import com.zheminglt.vo.CommentVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -33,6 +52,15 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private LikeMapper likeMapper;
+
+    @Autowired
+    private CollectionMapper collectionMapper;
+
+    @Autowired
+    private CommentMapper commentMapper;
+
+    @Autowired
+    private CategoryMapper categoryMapper;
 
     @Override
     public ResponseVO<UserVO> register(UserDTO userDTO) {
@@ -89,16 +117,23 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
-            String token = com.zheminglt.utils.JWTUtil.generateToken(user.getId());
-            System.out.println("生成token成功");
+            // 生成双Token
+            String accessToken = com.zheminglt.utils.JWTUtil.generateAccessToken(user.getId());
+            String refreshToken = com.zheminglt.utils.JWTUtil.generateRefreshToken(user.getId());
+            System.out.println("生成双token成功");
 
-            // 将token存入Redis
-            tokenService.storeToken(token, user.getId());
+            // 将双Token存入存储
+            tokenService.storeAccessToken(accessToken, user.getId());
+            tokenService.storeRefreshToken(refreshToken, user.getId());
             System.out.println("存储token成功");
 
             // 创建登录VO
             LoginVO loginVO = new LoginVO();
-            loginVO.setToken(token);
+            loginVO.setAccessToken(accessToken);
+            loginVO.setRefreshToken(refreshToken);
+            loginVO.setAccessTokenExpiresIn(BusinessConstant.ACCESS_TOKEN_EXPIRATION_SECONDS);
+            loginVO.setRefreshTokenExpiresIn(BusinessConstant.REFRESH_TOKEN_EXPIRATION_SECONDS);
+            loginVO.setTokenType("Bearer");
 
             // 设置用户信息
             UserVO userVO = new UserVO();
@@ -115,18 +150,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseVO<String> logout(String token) {
-        if (token == null || token.isEmpty()) {
+    public ResponseVO<String> logout(String accessToken) {
+        if (accessToken == null || accessToken.isEmpty()) {
             return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.TOKEN_EMPTY);
         }
 
-        // 检查token是否在Redis中存在且有效
-        if (!tokenService.isTokenValid(token)) {
+        // 检查AccessToken是否有效
+        if (!tokenService.isAccessTokenValid(accessToken)) {
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_INVALID);
         }
 
-        // 将token加入黑名单
-        tokenService.blacklistToken(token);
+        // 从AccessToken中获取用户ID
+        Long userId = com.zheminglt.utils.JWTUtil.getUserIdFromAccessToken(accessToken);
+
+        // 使该用户的所有Token失效（包括AccessToken和RefreshToken）
+        tokenService.invalidateAllUserTokens(userId);
 
         return ResponseVO.success(MessageConstant.USER_LOGOUT_SUCCESS);
     }
@@ -169,7 +207,7 @@ public class UserServiceImpl implements UserService {
         statsVO.setPosts(postCount);
 
         // 获赞数（统计该用户所有帖子的点赞数）
-        long likeCount = postMapper.findByUserId(userId, org.springframework.data.domain.Pageable.unpaged()).getContent().stream()
+        long likeCount = postMapper.findByUserId(userId, Pageable.unpaged()).getContent().stream()
                 .mapToLong(post -> likeMapper.countByPostId(post.getId()))
                 .sum();
         statsVO.setLikes(likeCount);
@@ -179,5 +217,155 @@ public class UserServiceImpl implements UserService {
         statsVO.setFollowers(0L);
 
         return ResponseVO.success(statsVO);
+    }
+
+    // ==================== 用户互动相关实现 ====================
+
+    @Override
+    public ResponseVO<PageVO<UserLikeVO>> getUserLikes(Long userId, int page, int size) {
+        // 检查用户是否存在
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Like> likePage = likeMapper.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+
+        List<UserLikeVO> likeVOList = likePage.getContent().stream().map(like -> {
+            UserLikeVO vo = new UserLikeVO();
+            vo.setId(like.getId());
+            vo.setUserId(like.getUser() != null ? like.getUser().getId() : null);
+            vo.setCreatedAt(like.getCreatedAt() != null ? like.getCreatedAt().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null);
+
+            // 判断点赞类型
+            if (like.getPost() != null) {
+                vo.setType("POST");
+                vo.setPostId(like.getPost().getId());
+                // 获取帖子信息
+                Post post = postMapper.findById(like.getPost().getId()).orElse(null);
+                if (post != null) {
+                    PostVO postVO = convertToPostVO(post);
+                    vo.setPost(postVO);
+                }
+            } else if (like.getComment() != null) {
+                vo.setType("COMMENT");
+                vo.setCommentId(like.getComment().getId());
+                // 获取评论信息
+                Comment comment = commentMapper.findById(like.getComment().getId()).orElse(null);
+                if (comment != null) {
+                    CommentVO commentVO = new CommentVO();
+                    BeanUtils.copyProperties(comment, commentVO);
+                    // 获取评论作者信息
+                    User commentUser = userMapper.findById(comment.getUser().getId()).orElse(null);
+                    if (commentUser != null) {
+                        commentVO.setAuthorName(commentUser.getUsername());
+                    }
+                    vo.setComment(commentVO);
+                }
+            }
+
+            return vo;
+        }).collect(Collectors.toList());
+
+        PageVO<UserLikeVO> pageVO = new PageVO<>();
+        pageVO.setList(likeVOList);
+        pageVO.setTotal(likePage.getTotalElements());
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        pageVO.setPages(likePage.getTotalPages());
+
+        return ResponseVO.success(pageVO);
+    }
+
+    @Override
+    public ResponseVO<PageVO<UserCollectionVO>> getUserFavorites(Long userId, int page, int size) {
+        // 检查用户是否存在
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Collection> collectionPage = collectionMapper.findByUserId(userId, pageable);
+
+        List<UserCollectionVO> collectionVOList = collectionPage.getContent().stream().map(collection -> {
+            UserCollectionVO vo = new UserCollectionVO();
+            vo.setId(collection.getId());
+            vo.setUserId(collection.getUser() != null ? collection.getUser().getId() : null);
+            vo.setPostId(collection.getPost() != null ? collection.getPost().getId() : null);
+            vo.setCreatedAt(collection.getCreatedAt() != null ? collection.getCreatedAt().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null);
+
+            // 获取帖子信息
+            if (collection.getPost() != null) {
+                Post post = postMapper.findById(collection.getPost().getId()).orElse(null);
+                if (post != null) {
+                    PostVO postVO = convertToPostVO(post);
+                    vo.setPost(postVO);
+                }
+            }
+
+            return vo;
+        }).collect(Collectors.toList());
+
+        PageVO<UserCollectionVO> pageVO = new PageVO<>();
+        pageVO.setList(collectionVOList);
+        pageVO.setTotal(collectionPage.getTotalElements());
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        pageVO.setPages(collectionPage.getTotalPages());
+
+        return ResponseVO.success(pageVO);
+    }
+
+    @Override
+    public ResponseVO<PageVO<PostVO>> getUserPosts(Long userId, int page, int size) {
+        // 检查用户是否存在
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Post> postPage = postMapper.findByUserId(userId, pageable);
+
+        List<PostVO> postVOList = postPage.getContent().stream()
+                .map(this::convertToPostVO)
+                .collect(Collectors.toList());
+
+        PageVO<PostVO> pageVO = new PageVO<>();
+        pageVO.setList(postVOList);
+        pageVO.setTotal(postPage.getTotalElements());
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        pageVO.setPages(postPage.getTotalPages());
+
+        return ResponseVO.success(pageVO);
+    }
+
+    // 辅助方法：将Post转换为PostVO
+    private PostVO convertToPostVO(Post post) {
+        PostVO vo = new PostVO();
+        vo.setId(post.getId());
+        vo.setTitle(post.getTitle());
+        vo.setContent(post.getContent());
+        vo.setViewCount(post.getViewCount());
+        vo.setLikeCount(post.getLikeCount());
+        vo.setCommentCount(post.getCommentCount());
+        vo.setStatus(post.getStatus());
+        vo.setCreatedAt(post.getCreatedAt());
+        vo.setUpdatedAt(post.getUpdatedAt());
+
+        // 设置作者名称
+        if (post.getUser() != null) {
+            vo.setAuthorName(post.getUser().getUsername());
+        }
+
+        // 设置分类名称
+        if (post.getCategory() != null) {
+            vo.setCategoryName(post.getCategory().getName());
+        }
+
+        return vo;
     }
 }

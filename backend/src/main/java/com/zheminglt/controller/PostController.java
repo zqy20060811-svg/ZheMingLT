@@ -1,5 +1,9 @@
 package com.zheminglt.controller;
 
+import com.zheminglt.mapper.CategoryMapper;
+import com.zheminglt.mapper.UserMapper;
+import com.zheminglt.model.Category;
+import com.zheminglt.model.User;
 import com.zheminglt.service.PostService;
 import com.zheminglt.service.HotPostService;
 import com.zheminglt.vo.PostVO;
@@ -11,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +31,16 @@ public class PostController {
     @Autowired
     private HotPostService hotPostService;
 
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private CategoryMapper categoryMapper;
+
     @Operation(summary = "获取帖子列表", description = "分页获取所有帖子，可按分类筛选")
     @GetMapping
     public ResponseVO<Map<String, Object>> getAllPosts(
-            @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "页码，默认0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "分类ID，可选") @RequestParam(required = false) Long categoryId) {
         List<PostVO> posts = postService.findAll().getData();
@@ -37,18 +48,26 @@ public class PostController {
         // 模拟分页逻辑
         int total = posts.size();
         int pages = (total + size - 1) / size;
+        boolean last = page >= pages - 1;
         List<PostVO> paginatedPosts = posts;
         
         if (total > 0) {
-            int start = (page - 1) * size;
+            int start = page * size;
             int end = Math.min(start + size, total);
-            paginatedPosts = posts.subList(start, end);
+            if (start < total) {
+                paginatedPosts = posts.subList(start, end);
+            } else {
+                paginatedPosts = new ArrayList<>();
+            }
         }
         
         Map<String, Object> data = new HashMap<>();
-        data.put("list", paginatedPosts);
-        data.put("total", total);
-        data.put("pages", pages);
+        data.put("content", paginatedPosts);
+        data.put("totalElements", total);
+        data.put("totalPages", pages);
+        data.put("last", last);
+        data.put("number", page);
+        data.put("size", size);
         
         return ResponseVO.success(data);
     }
@@ -82,11 +101,26 @@ public class PostController {
     @SecurityRequirement(name = "Authorization")
     @PostMapping
     public ResponseVO<PostVO> createPost(@Parameter(hidden = true) @RequestAttribute("userId") Long userId, 
-                                         @RequestBody com.zheminglt.model.Post post) {
-        // 设置发帖用户
-        com.zheminglt.model.User user = new com.zheminglt.model.User();
-        user.setId(userId);
+                                         @RequestBody com.zheminglt.dto.PostDTO postDTO) {
+        // 创建Post实体
+        com.zheminglt.model.Post post = new com.zheminglt.model.Post();
+        post.setTitle(postDTO.getTitle());
+        post.setContent(postDTO.getContent());
+        post.setSummary(postDTO.getSummary());
+        
+        // 从数据库查询用户和分类实体
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(404, "用户不存在");
+        }
         post.setUser(user);
+        
+        Category category = categoryMapper.findById(postDTO.getCategoryId()).orElse(null);
+        if (category == null) {
+            return ResponseVO.error(404, "分类不存在");
+        }
+        post.setCategory(category);
+        
         return postService.create(post);
     }
 

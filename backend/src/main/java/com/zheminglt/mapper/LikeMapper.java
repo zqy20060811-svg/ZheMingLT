@@ -1,6 +1,8 @@
 package com.zheminglt.mapper;
 
 import com.zheminglt.model.Like;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,4 +16,7 @@ public interface LikeMapper extends JpaRepository<Like, Long> {
     void deleteByUserIdAndCommentId(Long userId, Long commentId);
     long countByPostId(Long postId);
     long countByCommentId(Long commentId);
+
+    // 查询用户的点赞列表（按时间倒序）
+    Page<Like> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 }

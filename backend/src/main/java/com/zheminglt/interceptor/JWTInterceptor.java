@@ -21,7 +21,7 @@ public class JWTInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 获取请求头中的token
+        // 获取请求头中的AccessToken
         String authorization = request.getHeader(BusinessConstant.TOKEN_HEADER);
 
         if (authorization == null || !authorization.startsWith(BusinessConstant.TOKEN_PREFIX)) {
@@ -32,19 +32,21 @@ public class JWTInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        String token = authorization.substring(BusinessConstant.TOKEN_PREFIX.length());
+        String accessToken = authorization.substring(BusinessConstant.TOKEN_PREFIX.length());
 
-        // 1. 验证JWT token是否有效
-        if (!JWTUtil.validateToken(token)) {
+        // 1. 验证JWT AccessToken是否有效
+        if (!JWTUtil.validateAccessToken(accessToken)) {
+            // AccessToken已过期，检查是否需要返回特定错误码以便前端刷新
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_INVALID);
+            // 返回特定的错误码，告诉前端Token已过期，需要使用RefreshToken刷新
+            ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_TOKEN_EXPIRED, MessageConstant.TOKEN_EXPIRED);
             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
             return false;
         }
 
-        // 2. 检查token是否在Redis黑名单中
-        if (tokenService.isTokenBlacklisted(token)) {
+        // 2. 检查AccessToken是否在黑名单中
+        if (tokenService.isAccessTokenBlacklisted(accessToken)) {
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_BLACKLISTED);
@@ -52,8 +54,8 @@ public class JWTInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 3. 检查token是否在Redis中存在（可选，用于单点登录控制）
-        if (!tokenService.isTokenValid(token)) {
+        // 3. 检查AccessToken是否在存储中存在（可选，用于单点登录控制）
+        if (!tokenService.isAccessTokenValid(accessToken)) {
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.UNAUTHORIZED);
@@ -61,9 +63,14 @@ public class JWTInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 4. 从token中提取用户ID并设置到request属性中
-        Long userId = JWTUtil.getUserIdFromToken(token);
+        // 4. 从AccessToken中提取用户ID并设置到request属性中
+        Long userId = JWTUtil.getUserIdFromAccessToken(accessToken);
         request.setAttribute("userId", userId);
+
+        // 5. 检查AccessToken是否即将过期，如果是，在响应头中告知前端
+        if (JWTUtil.isAccessTokenExpiringSoon(accessToken)) {
+            response.setHeader("X-Token-Expiring-Soon", "true");
+        }
 
         return true;
     }

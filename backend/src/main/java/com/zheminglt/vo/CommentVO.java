@@ -12,4 +12,5 @@ public class CommentVO {
     private String content;
     private Integer status;
     private Date createdAt;
+    private String authorName;  // 作者名称
 }
