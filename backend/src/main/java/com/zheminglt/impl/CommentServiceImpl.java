@@ -11,6 +11,7 @@ import com.zheminglt.model.Comment;
 import com.zheminglt.model.Post;
 import com.zheminglt.model.User;
 import com.zheminglt.service.CommentService;
+import com.zheminglt.service.NotificationService;
 import com.zheminglt.vo.CommentVO;
 import com.zheminglt.vo.ResponseVO;
 import org.springframework.beans.BeanUtils;
@@ -31,6 +32,9 @@ public class CommentServiceImpl implements CommentService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     @Transactional
@@ -57,6 +61,16 @@ public class CommentServiceImpl implements CommentService {
         // 更新帖子评论数
         post.setCommentCount(post.getCommentCount() + 1);
         postMapper.save(post);
+
+        // 发送通知给帖子作者
+        if (post.getUser() != null && !post.getUser().getId().equals(userId)) {
+            notificationService.createCommentNotification(
+                    post.getId(),
+                    savedComment.getId(),
+                    userId,
+                    post.getUser().getId()
+            );
+        }
 
         CommentVO commentVO = convertToVO(savedComment);
         return ResponseVO.success(commentVO);

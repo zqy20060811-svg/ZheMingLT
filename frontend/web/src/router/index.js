@@ -7,6 +7,8 @@ import CreatePostView from '@/views/CreatePostView.vue'
 import HotView from '@/views/HotView.vue'
 import CategoryView from '@/views/CategoryView.vue'
 import ProfileView from '@/views/ProfileView.vue'
+import SearchView from '@/views/SearchView.vue'
+import NotificationView from '@/views/NotificationView.vue'
 
 // 获取AccessToken的辅助函数
 function getAccessToken() {
@@ -84,6 +86,17 @@ const routes = [
     path: '/settings',
     name: 'settings',
     component: ProfileView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/search',
+    name: 'search',
+    component: SearchView
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: NotificationView,
     meta: { requiresAuth: true }
   }
 ]

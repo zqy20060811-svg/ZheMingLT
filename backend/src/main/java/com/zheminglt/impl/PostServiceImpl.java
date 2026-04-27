@@ -119,4 +119,44 @@ public class PostServiceImpl implements PostService {
         postMapper.delete(post);
         return ResponseVO.success(null);
     }
+
+    @Override
+    public ResponseVO<com.zheminglt.vo.PageVO<PostVO>> searchPosts(String keyword, Long categoryId, String sortBy, int page, int size) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, "搜索关键词不能为空");
+        }
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, size);
+        org.springframework.data.domain.Page<Post> postPage;
+
+        // 根据是否有分类ID选择查询方法
+        if (categoryId != null) {
+            postPage = postMapper.searchPostsByCategory(keyword.trim(), categoryId, pageable);
+        } else {
+            postPage = postMapper.searchPosts(keyword.trim(), pageable);
+        }
+
+        // 转换为VO列表
+        List<PostVO> postVOList = postPage.getContent().stream()
+                .map(this::convertToVO)
+                .collect(java.util.stream.Collectors.toList());
+
+        // 如果是按热度排序，重新排序
+        if ("hot".equalsIgnoreCase(sortBy)) {
+            postVOList.sort((a, b) -> {
+                int heatA = a.getViewCount() * 1 + a.getLikeCount() * 3 + a.getCommentCount() * 5;
+                int heatB = b.getViewCount() * 1 + b.getLikeCount() * 3 + b.getCommentCount() * 5;
+                return Integer.compare(heatB, heatA);
+            });
+        }
+
+        com.zheminglt.vo.PageVO<PostVO> pageVO = new com.zheminglt.vo.PageVO<>();
+        pageVO.setList(postVOList);
+        pageVO.setTotal(postPage.getTotalElements());
+        pageVO.setPage(page);
+        pageVO.setSize(size);
+        pageVO.setPages(postPage.getTotalPages());
+
+        return ResponseVO.success(pageVO);
+    }
 }

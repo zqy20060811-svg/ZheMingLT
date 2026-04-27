@@ -138,4 +138,15 @@ public class PostController {
     public ResponseVO<Void> deletePost(@Parameter(description = "帖子ID") @PathVariable Long id) {
         return postService.delete(id);
     }
+
+    @Operation(summary = "搜索帖子", description = "根据关键词搜索帖子标题和内容，支持按分类筛选和排序")
+    @GetMapping("/search")
+    public ResponseVO<com.zheminglt.vo.PageVO<PostVO>> searchPosts(
+            @Parameter(description = "搜索关键词") @RequestParam String keyword,
+            @Parameter(description = "分类ID，可选") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "排序方式：time-时间，hot-热度，默认time") @RequestParam(defaultValue = "time") String sortBy,
+            @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") int size) {
+        return postService.searchPosts(keyword, categoryId, sortBy, page, size);
+    }
 }

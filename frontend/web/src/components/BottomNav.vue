@@ -6,14 +6,20 @@
       :to="item.path"
       :class="['nav-item', { active: active === item.name }]"
     >
-      <i :class="item.icon"></i>
+      <div class="nav-icon-wrapper">
+        <i :class="item.icon"></i>
+        <span v-if="item.name === 'notifications' && unreadCount > 0" class="badge">
+          {{ unreadCount > 99 ? '99+' : unreadCount }}
+        </span>
+      </div>
       <span>{{ item.label }}</span>
     </router-link>
   </nav>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { get } from '@/utils/request'
 
 defineProps({
   active: {
@@ -23,16 +29,44 @@ defineProps({
 })
 
 const isDarkMode = ref(false)
+const unreadCount = ref(0)
+let refreshInterval = null
 
 const navItems = [
   { name: 'home', path: '/', label: '首页', icon: 'bi bi-house-door' },
   { name: 'hot', path: '/hot', label: '热门', icon: 'bi bi-fire' },
   { name: 'category', path: '/category', label: '分类', icon: 'bi bi-grid' },
+  { name: 'notifications', path: '/notifications', label: '消息', icon: 'bi bi-bell' },
   { name: 'profile', path: '/profile', label: '我的', icon: 'bi bi-person' }
 ]
 
+// 加载未读消息数
+async function loadUnreadCount() {
+  const token = localStorage.getItem('accessToken')
+  if (!token) return
+
+  try {
+    const res = await get('/notifications/unread-count')
+    if (res.code === 200) {
+      unreadCount.value = res.data || 0
+    }
+  } catch (error) {
+    console.error('加载未读消息数失败', error)
+  }
+}
+
 onMounted(() => {
   isDarkMode.value = localStorage.getItem('darkMode') === 'true'
+  loadUnreadCount()
+
+  // 每30秒刷新一次未读消息数
+  refreshInterval = setInterval(loadUnreadCount, 30000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 </script>
 
@@ -83,5 +117,29 @@ onMounted(() => {
 
 .nav-item:active {
   transform: scale(0.9);
+}
+
+.nav-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

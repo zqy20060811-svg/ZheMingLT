@@ -31,4 +31,12 @@ public interface PostMapper extends JpaRepository<Post, Long> {
     // 本月热门
     @Query("SELECT p FROM Post p WHERE p.createdAt >= :startTime ORDER BY (p.viewCount * 1 + p.likeCount * 3 + p.commentCount * 5) DESC")
     Page<Post> findHotPostsMonth(@Param("startTime") LocalDateTime startTime, Pageable pageable);
+
+    // 搜索帖子（标题或内容）
+    @Query("SELECT p FROM Post p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% ORDER BY p.createdAt DESC")
+    Page<Post> searchPosts(@Param("keyword") String keyword, Pageable pageable);
+
+    // 按分类搜索帖子
+    @Query("SELECT p FROM Post p WHERE p.category.id = :categoryId AND (p.title LIKE %:keyword% OR p.content LIKE %:keyword%) ORDER BY p.createdAt DESC")
+    Page<Post> searchPostsByCategory(@Param("keyword") String keyword, @Param("categoryId") Long categoryId, Pageable pageable);
 }

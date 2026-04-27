@@ -65,4 +65,9 @@ public final class MessageConstant {
     public static final String NOT_LIKED = "还没有点赞";
     public static final String ALREADY_COLLECTED = "已经收藏过了";
     public static final String NOT_COLLECTED = "还没有收藏";
+
+    // ==================== 通知相关消息 ====================
+    public static final String NOTIFICATION_NOT_FOUND = "通知不存在";
+    public static final String NOTIFICATION_MARK_READ_SUCCESS = "标记已读成功";
+    public static final String NOTIFICATION_DELETE_SUCCESS = "通知删除成功";
 }
