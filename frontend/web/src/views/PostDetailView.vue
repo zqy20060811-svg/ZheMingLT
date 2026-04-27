@@ -51,25 +51,25 @@
           <h1 class="post-title">{{ postDetail.title }}</h1>
           <div class="post-meta">
             <div class="author-info">
-              <img :src="postDetail.authorAvatar || defaultAvatar" class="author-avatar" />
+              <img :src="postDetail.authorAvatar || defaultAvatar" class="author-avatar" @click="goToUserProfile(postDetail.userId)" />
               <div class="author-details">
                 <span class="author-name" @click="goToUserProfile(postDetail.userId)">{{ postDetail.authorName || '匿名用户' }}</span>
                 <span class="post-time">
                   <i class="bi bi-clock"></i>
                   {{ formatTime(postDetail.createdAt) }}
                 </span>
+                <!-- 关注作者按钮 -->
+                <button
+                  v-if="!isAuthor && postDetail.userId"
+                  :class="['follow-author-btn', { following: isFollowingAuthor }]"
+                  @click.stop="toggleFollowAuthor"
+                  :disabled="followLoading"
+                >
+                  <i v-if="followLoading" class="bi bi-arrow-repeat spinning"></i>
+                  <i v-else :class="isFollowingAuthor ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+                  <span>{{ isFollowingAuthor ? '已关注' : '关注' }}</span>
+                </button>
               </div>
-              <!-- 关注作者按钮 -->
-              <button
-                v-if="!isAuthor && postDetail.userId"
-                :class="['follow-author-btn', { following: isFollowingAuthor }]"
-                @click.stop="toggleFollowAuthor"
-                :disabled="followLoading"
-              >
-                <i v-if="followLoading" class="bi bi-arrow-repeat spinning"></i>
-                <i v-else :class="isFollowingAuthor ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
-                <span>{{ isFollowingAuthor ? '已关注' : '关注' }}</span>
-              </button>
             </div>
             <div class="post-stats">
               <span class="stat-item">
@@ -859,6 +859,14 @@ onMounted(() => {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(102, 126, 234, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.author-avatar:hover {
+  transform: scale(1.1);
+  border-color: #667eea;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .author-details {
