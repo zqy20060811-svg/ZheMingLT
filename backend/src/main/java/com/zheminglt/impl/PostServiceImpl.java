@@ -52,8 +52,9 @@ public class PostServiceImpl implements PostService {
     private PostVO convertToVO(Post post) {
         PostVO postVO = new PostVO();
         BeanUtils.copyProperties(post, postVO);
-        // 手动设置作者名称和分类名称
+        // 手动设置作者信息和分类名称
         if (post.getUser() != null) {
+            postVO.setUserId(post.getUser().getId());
             postVO.setAuthorName(post.getUser().getUsername());
         }
         if (post.getCategory() != null) {

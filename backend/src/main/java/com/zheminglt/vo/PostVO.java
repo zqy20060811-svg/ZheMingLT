@@ -26,6 +26,9 @@ public class PostVO {
     @Schema(description = "热度分数")
     private Integer heat;
 
+    @Schema(description = "作者ID")
+    private Long userId;
+
     @Schema(description = "作者名称")
     private String authorName;
 

@@ -305,7 +305,8 @@ const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
 
 // 计算属性
 const isAuthor = computed(() => {
-  return postDetail.value && postDetail.value.userId === currentUserId.value
+  if (!postDetail.value || !postDetail.value.userId || !currentUserId.value) return false
+  return String(postDetail.value.userId) === String(currentUserId.value)
 })
 
 // 方法
