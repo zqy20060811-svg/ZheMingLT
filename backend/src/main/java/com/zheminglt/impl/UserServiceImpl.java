@@ -181,6 +181,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public ResponseVO<UserVO> getUserById(Long userId) {
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        // 不返回敏感信息
+        userVO.setEmail(null);
+        userVO.setPhone(null);
+        return ResponseVO.success(userVO);
+    }
+
+    @Override
     public ResponseVO<UserVO> updateUserInfo(Long userId, UserDTO userDTO) {
         User user = userMapper.findById(userId).orElse(null);
         if (user == null) {

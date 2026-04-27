@@ -11,6 +11,7 @@ import SearchView from '@/views/SearchView.vue'
 import NotificationView from '@/views/NotificationView.vue'
 import FollowListView from '@/views/FollowListView.vue'
 import EditPostView from '@/views/EditPostView.vue'
+import UserProfileView from '@/views/UserProfileView.vue'
 
 // 获取AccessToken的辅助函数
 function getAccessToken() {
@@ -118,6 +119,11 @@ const routes = [
     name: 'edit-post',
     component: EditPostView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'user-profile',
+    component: UserProfileView
   }
 ]
 

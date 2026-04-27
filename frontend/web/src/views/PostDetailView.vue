@@ -53,12 +53,23 @@
             <div class="author-info">
               <img :src="postDetail.authorAvatar || defaultAvatar" class="author-avatar" />
               <div class="author-details">
-                <span class="author-name">{{ postDetail.authorName || '匿名用户' }}</span>
+                <span class="author-name" @click="goToUserProfile(postDetail.userId)">{{ postDetail.authorName || '匿名用户' }}</span>
                 <span class="post-time">
                   <i class="bi bi-clock"></i>
                   {{ formatTime(postDetail.createdAt) }}
                 </span>
               </div>
+              <!-- 关注作者按钮 -->
+              <button
+                v-if="!isAuthor && postDetail.userId"
+                :class="['follow-author-btn', { following: isFollowingAuthor }]"
+                @click.stop="toggleFollowAuthor"
+                :disabled="followLoading"
+              >
+                <i v-if="followLoading" class="bi bi-arrow-repeat spinning"></i>
+                <i v-else :class="isFollowingAuthor ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+                <span>{{ isFollowingAuthor ? '已关注' : '关注' }}</span>
+              </button>
             </div>
             <div class="post-stats">
               <span class="stat-item">
@@ -287,6 +298,8 @@ const comments = ref([])
 const newComment = ref('')
 const replyingTo = ref(null)
 const replyContent = ref('')
+const isFollowingAuthor = ref(false)
+const followLoading = ref(false)
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
 
@@ -320,11 +333,65 @@ async function loadPost() {
     if (res.code === 200) {
       postDetail.value = res.data
       await loadComments(id)
+      // 检查是否已关注作者
+      if (currentUserId.value && postDetail.value.userId && !isAuthor.value) {
+        await checkFollowStatus()
+      }
     } else {
       postDetail.value = null
     }
   } finally {
     loading.value = false
+  }
+}
+
+// 检查是否已关注作者
+async function checkFollowStatus() {
+  try {
+    const res = await get(`/follows/${postDetail.value.userId}/check`)
+    if (res.code === 200) {
+      isFollowingAuthor.value = res.data
+    }
+  } catch (error) {
+    console.error('检查关注状态失败', error)
+  }
+}
+
+// 关注/取消关注作者
+async function toggleFollowAuthor() {
+  if (!isLoggedIn.value) {
+    alert('请先登录')
+    router.push('/login')
+    return
+  }
+
+  followLoading.value = true
+  try {
+    if (isFollowingAuthor.value) {
+      // 取消关注
+      const res = await del(`/follows/${postDetail.value.userId}`)
+      if (res.code === 200) {
+        isFollowingAuthor.value = false
+      }
+    } else {
+      // 关注
+      const res = await post(`/follows/${postDetail.value.userId}`)
+      if (res.code === 200) {
+        isFollowingAuthor.value = true
+      }
+    }
+  } catch (error) {
+    console.error('关注操作失败', error)
+    alert('操作失败，请重试')
+  } finally {
+    followLoading.value = false
+  }
+}
+
+// 跳转到用户主页
+function goToUserProfile(userId) {
+  if (userId) {
+    router.push(`/user/${userId}`)
   }
 }
 
@@ -804,10 +871,61 @@ onMounted(() => {
   font-size: 0.95rem;
   font-weight: 700;
   color: #2d3748;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.author-name:hover {
+  color: #667eea;
 }
 
 .dark-mode .author-name {
   color: #e2e8f0;
+}
+
+.dark-mode .author-name:hover {
+  color: #a0b4f0;
+}
+
+/* 关注作者按钮 */
+.follow-author-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  margin-top: 8px;
+  border: 1px solid #667eea;
+  border-radius: 20px;
+  background: transparent;
+  color: #667eea;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.follow-author-btn:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.follow-author-btn.following {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: transparent;
+  color: #666;
+}
+
+.dark-mode .follow-author-btn.following {
+  color: #a0a0c0;
+}
+
+.follow-author-btn.following:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+}
+
+.follow-author-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .post-time {

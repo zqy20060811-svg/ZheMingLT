@@ -121,6 +121,13 @@ public class UserController {
 
     // ==================== 用户互动相关接口 ====================
 
+    @Operation(summary = "根据ID获取用户信息", description = "获取指定用户的公开信息")
+    @GetMapping("/{userId}")
+    public ResponseVO<UserVO> getUserById(
+            @Parameter(description = "用户ID") @PathVariable Long userId) {
+        return userService.getUserById(userId);
+    }
+
     @Operation(summary = "获取用户的点赞列表", description = "获取指定用户点赞的帖子和评论列表")
     @SecurityRequirement(name = "Authorization")
     @GetMapping("/{userId}/likes")

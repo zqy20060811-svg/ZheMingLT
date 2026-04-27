@@ -19,6 +19,9 @@ public interface UserService {
     ResponseVO<UserVO> updateUserInfo(Long userId, UserDTO userDTO);
     ResponseVO<UserStatsVO> getUserStats(Long userId);
 
+    // 根据ID获取用户信息
+    ResponseVO<UserVO> getUserById(Long userId);
+
     // 用户互动相关
     ResponseVO<PageVO<UserLikeVO>> getUserLikes(Long userId, int page, int size);
     ResponseVO<PageVO<UserCollectionVO>> getUserFavorites(Long userId, int page, int size);
