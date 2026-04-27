@@ -84,7 +84,7 @@
               </div>
             </div>
             <div class="stat-divider"></div>
-            <div class="stat-item">
+            <div class="stat-item" @click="goToFollowing">
               <div class="stat-icon following">
                 <i class="bi bi-people-fill"></i>
               </div>
@@ -94,7 +94,7 @@
               </div>
             </div>
             <div class="stat-divider"></div>
-            <div class="stat-item">
+            <div class="stat-item" @click="goToFollowers">
               <div class="stat-icon followers">
                 <i class="bi bi-person-heart"></i>
               </div>
@@ -318,6 +318,16 @@ function goToMyCollections() {
 function goToHistory() {
   if (!checkLogin()) return
   router.push('/history')
+}
+
+function goToFollowing() {
+  if (!checkLogin()) return
+  router.push(`/follows/${user.value.id}/following`)
+}
+
+function goToFollowers() {
+  if (!checkLogin()) return
+  router.push(`/follows/${user.value.id}/followers`)
 }
 
 function goToSettings() {

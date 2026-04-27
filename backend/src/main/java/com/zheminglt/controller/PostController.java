@@ -127,9 +127,20 @@ public class PostController {
     @Operation(summary = "更新帖子", description = "更新帖子内容，需要登录且是帖子作者")
     @SecurityRequirement(name = "Authorization")
     @PutMapping("/{id}")
-    public ResponseVO<PostVO> updatePost(@Parameter(description = "帖子ID") @PathVariable Long id, 
-                                         @RequestBody com.zheminglt.model.Post post) {
-        return postService.update(id, post);
+    public ResponseVO<PostVO> updatePost(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @Parameter(description = "帖子ID") @PathVariable Long id, 
+            @RequestBody com.zheminglt.dto.PostDTO postDTO) {
+        com.zheminglt.model.Post post = new com.zheminglt.model.Post();
+        post.setTitle(postDTO.getTitle());
+        post.setContent(postDTO.getContent());
+        post.setSummary(postDTO.getSummary());
+        if (postDTO.getCategoryId() != null) {
+            Category category = new Category();
+            category.setId(postDTO.getCategoryId());
+            post.setCategory(category);
+        }
+        return postService.update(id, post, userId);
     }
 
     @Operation(summary = "删除帖子", description = "删除帖子，需要登录且是帖子作者或管理员")

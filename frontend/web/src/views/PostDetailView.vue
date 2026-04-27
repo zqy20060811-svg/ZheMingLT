@@ -379,7 +379,7 @@ function scrollToComments() {
 }
 
 function editPost() {
-  router.push(`/edit/${postDetail.value.id}`)
+  router.push(`/post/${postDetail.value.id}/edit`)
 }
 
 async function deletePost() {

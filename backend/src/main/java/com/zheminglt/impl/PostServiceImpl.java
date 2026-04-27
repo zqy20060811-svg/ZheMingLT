@@ -3,8 +3,12 @@ package com.zheminglt.impl;
 import com.zheminglt.constant.BusinessConstant;
 import com.zheminglt.constant.ErrorCodeConstant;
 import com.zheminglt.constant.MessageConstant;
+import com.zheminglt.mapper.CategoryMapper;
 import com.zheminglt.mapper.PostMapper;
+import com.zheminglt.mapper.UserMapper;
+import com.zheminglt.model.Category;
 import com.zheminglt.model.Post;
+import com.zheminglt.model.User;
 import com.zheminglt.service.PostService;
 import com.zheminglt.vo.PostVO;
 import com.zheminglt.vo.ResponseVO;
@@ -20,6 +24,12 @@ public class PostServiceImpl implements PostService {
 
     @Autowired
     private PostMapper postMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private CategoryMapper categoryMapper;
 
     @Override
     public ResponseVO<List<PostVO>> findAll() {
@@ -98,15 +108,44 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public ResponseVO<PostVO> update(Long id, Post post) {
+    public ResponseVO<PostVO> update(Long id, Post post, Long userId) {
         Post existingPost = postMapper.findById(id).orElse(null);
         if (existingPost == null) {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
-        BeanUtils.copyProperties(post, existingPost);
+
+        // 检查是否是帖子作者或管理员
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+
+        boolean isAuthor = existingPost.getUser() != null && existingPost.getUser().getId().equals(userId);
+        boolean isAdmin = user.getRole() != null && user.getRole() == BusinessConstant.ROLE_ADMIN;
+
+        if (!isAuthor && !isAdmin) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_FORBIDDEN, MessageConstant.FORBIDDEN);
+        }
+
+        // 只更新允许更新的字段
+        if (post.getTitle() != null) {
+            existingPost.setTitle(post.getTitle());
+        }
+        if (post.getContent() != null) {
+            existingPost.setContent(post.getContent());
+        }
+        if (post.getSummary() != null) {
+            existingPost.setSummary(post.getSummary());
+        }
+        if (post.getCategory() != null && post.getCategory().getId() != null) {
+            Category category = categoryMapper.findById(post.getCategory().getId()).orElse(null);
+            if (category != null) {
+                existingPost.setCategory(category);
+            }
+        }
+
         Post savedPost = postMapper.save(existingPost);
-        PostVO postVO = new PostVO();
-        BeanUtils.copyProperties(savedPost, postVO);
+        PostVO postVO = convertToVO(savedPost);
         return ResponseVO.success(postVO);
     }
 

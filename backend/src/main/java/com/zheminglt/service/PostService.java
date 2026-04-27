@@ -12,7 +12,7 @@ public interface PostService {
     ResponseVO<List<PostVO>> findHot();
     ResponseVO<PostVO> findById(Long id);
     ResponseVO<PostVO> create(Post post);
-    ResponseVO<PostVO> update(Long id, Post post);
+    ResponseVO<PostVO> update(Long id, Post post, Long userId);
     ResponseVO<Void> delete(Long id);
 
     // 搜索功能

@@ -9,6 +9,8 @@ import CategoryView from '@/views/CategoryView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import SearchView from '@/views/SearchView.vue'
 import NotificationView from '@/views/NotificationView.vue'
+import FollowListView from '@/views/FollowListView.vue'
+import EditPostView from '@/views/EditPostView.vue'
 
 // 获取AccessToken的辅助函数
 function getAccessToken() {
@@ -97,6 +99,24 @@ const routes = [
     path: '/notifications',
     name: 'notifications',
     component: NotificationView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/follows/:userId/following',
+    name: 'following',
+    component: FollowListView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/follows/:userId/followers',
+    name: 'followers',
+    component: FollowListView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/post/:id/edit',
+    name: 'edit-post',
+    component: EditPostView,
     meta: { requiresAuth: true }
   }
 ]
