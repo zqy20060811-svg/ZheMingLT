@@ -3,45 +3,51 @@ package com.zheminglt.impl;
 import com.zheminglt.constant.BusinessConstant;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.utils.JWTUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TokenServiceImpl implements TokenService {
 
-    // AccessToken存储: token -> userId
-    private static final Map<String, Long> accessTokenStore = new ConcurrentHashMap<>();
-    // AccessToken黑名单: token -> blacklistTime
-    private static final Map<String, Long> accessTokenBlacklist = new ConcurrentHashMap<>();
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
-    // RefreshToken存储: token -> userId
-    private static final Map<String, Long> refreshTokenStore = new ConcurrentHashMap<>();
-    // RefreshToken黑名单: token -> blacklistTime
-    private static final Map<String, Long> refreshTokenBlacklist = new ConcurrentHashMap<>();
-
-    // 用户Token映射: userId -> {accessToken, refreshToken}
-    private static final Map<Long, Map<String, String>> userTokenMap = new ConcurrentHashMap<>();
+    // Redis Key 前缀
+    private static final String ACCESS_TOKEN_PREFIX = "token:access:";
+    private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
+    private static final String ACCESS_TOKEN_BLACKLIST_PREFIX = "token:blacklist:access:";
+    private static final String REFRESH_TOKEN_BLACKLIST_PREFIX = "token:blacklist:refresh:";
+    private static final String USER_TOKEN_PREFIX = "token:user:";
 
     // ==================== AccessToken 相关 ====================
 
     @Override
     public void storeAccessToken(String token, Long userId) {
-        accessTokenStore.put(token, userId);
+        String key = ACCESS_TOKEN_PREFIX + token;
+        // 存储到 Redis，过期时间与 JWT 一致（15 分钟）
+        redisTemplate.opsForValue().set(key, userId.toString(), BusinessConstant.ACCESS_TOKEN_EXPIRATION, TimeUnit.MILLISECONDS);
         // 更新用户Token映射
-        userTokenMap.computeIfAbsent(userId, k -> new ConcurrentHashMap<>()).put("accessToken", token);
+        redisTemplate.opsForHash().put(USER_TOKEN_PREFIX + userId, "accessToken", token);
     }
 
     @Override
     public boolean isAccessTokenValid(String token) {
         // 先检查是否在黑名单中
         if (isAccessTokenBlacklisted(token)) {
+            System.out.println("Token在黑名单中: " + token.substring(0, 20) + "...");
             return false;
         }
         // 再检查token是否存在且JWT有效
-        if (!accessTokenStore.containsKey(token)) {
+        String key = ACCESS_TOKEN_PREFIX + token;
+        boolean exists = Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        System.out.println("Token是否存在: " + exists + ", key: " + key.substring(0, 30) + "...");
+        if (!exists) {
             return false;
         }
         return JWTUtil.validateAccessToken(token);
@@ -49,23 +55,30 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void blacklistAccessToken(String token) {
-        accessTokenBlacklist.put(token, System.currentTimeMillis());
+        // 获取剩余过期时间
+        long expireTime = JWTUtil.getAccessTokenExpireTime(token);
+        if (expireTime > 0) {
+            String key = ACCESS_TOKEN_BLACKLIST_PREFIX + token;
+            redisTemplate.opsForValue().set(key, "1", expireTime, TimeUnit.MILLISECONDS);
+        }
+        // 删除原Token
         removeAccessToken(token);
     }
 
     @Override
     public boolean isAccessTokenBlacklisted(String token) {
-        return accessTokenBlacklist.containsKey(token);
+        String key = ACCESS_TOKEN_BLACKLIST_PREFIX + token;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     @Override
     public void removeAccessToken(String token) {
-        Long userId = accessTokenStore.remove(token);
-        if (userId != null) {
-            Map<String, String> tokens = userTokenMap.get(userId);
-            if (tokens != null && token.equals(tokens.get("accessToken"))) {
-                tokens.remove("accessToken");
-            }
+        String key = ACCESS_TOKEN_PREFIX + token;
+        String userIdStr = redisTemplate.opsForValue().get(key);
+        if (userIdStr != null) {
+            redisTemplate.delete(key);
+            // 从用户Token映射中移除
+            redisTemplate.opsForHash().delete(USER_TOKEN_PREFIX + userIdStr, "accessToken");
         }
     }
 
@@ -73,9 +86,11 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void storeRefreshToken(String token, Long userId) {
-        refreshTokenStore.put(token, userId);
+        String key = REFRESH_TOKEN_PREFIX + token;
+        // 存储到 Redis，过期时间与 JWT 一致（7 天）
+        redisTemplate.opsForValue().set(key, userId.toString(), BusinessConstant.REFRESH_TOKEN_EXPIRATION, TimeUnit.MILLISECONDS);
         // 更新用户Token映射
-        userTokenMap.computeIfAbsent(userId, k -> new ConcurrentHashMap<>()).put("refreshToken", token);
+        redisTemplate.opsForHash().put(USER_TOKEN_PREFIX + userId, "refreshToken", token);
     }
 
     @Override
@@ -85,7 +100,8 @@ public class TokenServiceImpl implements TokenService {
             return false;
         }
         // 再检查token是否存在且JWT有效
-        if (!refreshTokenStore.containsKey(token)) {
+        String key = REFRESH_TOKEN_PREFIX + token;
+        if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             return false;
         }
         return JWTUtil.validateRefreshToken(token);
@@ -93,23 +109,30 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void blacklistRefreshToken(String token) {
-        refreshTokenBlacklist.put(token, System.currentTimeMillis());
+        // 获取剩余过期时间
+        long expireTime = JWTUtil.getRefreshTokenExpireTime(token);
+        if (expireTime > 0) {
+            String key = REFRESH_TOKEN_BLACKLIST_PREFIX + token;
+            redisTemplate.opsForValue().set(key, "1", expireTime, TimeUnit.MILLISECONDS);
+        }
+        // 删除原Token
         removeRefreshToken(token);
     }
 
     @Override
     public boolean isRefreshTokenBlacklisted(String token) {
-        return refreshTokenBlacklist.containsKey(token);
+        String key = REFRESH_TOKEN_BLACKLIST_PREFIX + token;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     @Override
     public void removeRefreshToken(String token) {
-        Long userId = refreshTokenStore.remove(token);
-        if (userId != null) {
-            Map<String, String> tokens = userTokenMap.get(userId);
-            if (tokens != null && token.equals(tokens.get("refreshToken"))) {
-                tokens.remove("refreshToken");
-            }
+        String key = REFRESH_TOKEN_PREFIX + token;
+        String userIdStr = redisTemplate.opsForValue().get(key);
+        if (userIdStr != null) {
+            redisTemplate.delete(key);
+            // 从用户Token映射中移除
+            redisTemplate.opsForHash().delete(USER_TOKEN_PREFIX + userIdStr, "refreshToken");
         }
     }
 
@@ -129,12 +152,9 @@ public class TokenServiceImpl implements TokenService {
         blacklistRefreshToken(refreshToken);
 
         // 4. 将旧的AccessToken也加入黑名单
-        Map<String, String> oldTokens = userTokenMap.get(userId);
-        if (oldTokens != null) {
-            String oldAccessToken = oldTokens.get("accessToken");
-            if (oldAccessToken != null) {
-                blacklistAccessToken(oldAccessToken);
-            }
+        String oldAccessToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "accessToken");
+        if (oldAccessToken != null) {
+            blacklistAccessToken(oldAccessToken);
         }
 
         // 5. 生成新的双Token
@@ -154,18 +174,19 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void invalidateAllUserTokens(Long userId) {
-        Map<String, String> tokens = userTokenMap.remove(userId);
-        if (tokens != null) {
-            String accessToken = tokens.get("accessToken");
-            String refreshToken = tokens.get("refreshToken");
+        // 获取用户的所有Token并加入黑名单
+        String oldAccessToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "accessToken");
+        String oldRefreshToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "refreshToken");
 
-            if (accessToken != null) {
-                blacklistAccessToken(accessToken);
-            }
-            if (refreshToken != null) {
-                blacklistRefreshToken(refreshToken);
-            }
+        if (oldAccessToken != null) {
+            blacklistAccessToken(oldAccessToken);
         }
+        if (oldRefreshToken != null) {
+            blacklistRefreshToken(oldRefreshToken);
+        }
+
+        // 删除用户Token映射
+        redisTemplate.delete(USER_TOKEN_PREFIX + userId);
     }
 
     // ==================== 兼容旧版方法（已废弃） ====================

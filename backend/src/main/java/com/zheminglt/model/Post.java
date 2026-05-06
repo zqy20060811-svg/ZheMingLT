@@ -2,6 +2,8 @@ package com.zheminglt.model;
 
 import jakarta.persistence.*;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "posts")
@@ -36,11 +38,22 @@ public class Post {
     @Column(name = "comment_count", nullable = false, columnDefinition = "int default 0")
     private Integer commentCount;
 
+    @Column(name = "collect_count", nullable = false, columnDefinition = "int default 0")
+    private Integer collectCount;
+
     @Column(name = "status", nullable = false, columnDefinition = "int default 0")
     private Integer status;
 
     @Column(name = "reason", length = 500)
     private String reason;
+
+    @ManyToMany
+    @JoinTable(
+        name = "post_tags",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, columnDefinition = "datetime default CURRENT_TIMESTAMP")
     private Date createdAt;
@@ -131,6 +144,14 @@ public class Post {
         this.commentCount = commentCount;
     }
 
+    public Integer getCollectCount() {
+        return collectCount;
+    }
+
+    public void setCollectCount(Integer collectCount) {
+        this.collectCount = collectCount;
+    }
+
     public Integer getStatus() {
         return status;
     }
@@ -161,5 +182,13 @@ public class Post {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 }

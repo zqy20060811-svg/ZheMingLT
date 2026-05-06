@@ -14,19 +14,18 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        System.out.println("========== WebConfig.addInterceptors 被调用 ==========");
+        System.out.println("JWTInterceptor is null: " + (jwtInterceptor == null));
         registry.addInterceptor(jwtInterceptor)
-                // 需要拦截的路径
-                .addPathPatterns("/users/info", "/users/info/**")
-                .addPathPatterns("/users/stats", "/users/profile")
-                .addPathPatterns("/users/logout")
-                .addPathPatterns("/posts")  // POST /posts 需要拦截
-                .addPathPatterns("/posts/update", "/posts/delete")
-                .addPathPatterns("/comments", "/comments/**")
-                .addPathPatterns("/likes", "/likes/**")
-                .addPathPatterns("/collections", "/collections/**")
-                // 不需要拦截的路径（公开接口）
+                // 拦截所有路径（context-path已经是/api，所以这里用/**）
+                .addPathPatterns("/**")
+                // 不需要拦截的公开接口
                 .excludePathPatterns("/users/login", "/users/register", "/users/refresh")
-                .excludePathPatterns("/posts/hot", "/posts/{id}")  // GET /posts/hot 和 GET /posts/{id} 公开
-                .excludePathPatterns("/categories", "/categories/**");
+                .excludePathPatterns("/posts", "/posts/hot", "/posts/{id:[\\d+]}", "/posts/user/{userId:[\\d+]}")
+                .excludePathPatterns("/categories", "/categories/**")
+                .excludePathPatterns("/comments/post/{postId:[\\d+]}")
+                .excludePathPatterns("/follows/{userId:[\\d+]}/following/count", "/follows/{userId:[\\d+]}/followers/count")
+                .excludePathPatterns("/users/{userId:[\\d+]}", "/users/{userId:[\\d+]}/stats", "/users/{userId:[\\d+]}/posts")
+                .excludePathPatterns("/swagger-ui/**", "/v3/api-docs/**");
     }
 }

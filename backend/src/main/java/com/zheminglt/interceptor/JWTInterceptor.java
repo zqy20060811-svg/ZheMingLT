@@ -23,8 +23,20 @@ public class JWTInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 获取请求头中的AccessToken
         String authorization = request.getHeader(BusinessConstant.TOKEN_HEADER);
+        
+        // 定义可选验证的路径（有token就解析，没有也不报错）
+        String requestUri = request.getRequestURI();
+        String method = request.getMethod();
+        boolean isOptionalAuthPath = requestUri.matches("/api/posts/\\d+") || requestUri.matches("/api/comments/post/\\d+");
+
+        System.out.println("========== JWTInterceptor 被调用 ==========");
+        System.out.println("JWTInterceptor - URI: " + requestUri + ", Method: " + method + ", Authorization: " + (authorization != null ? "存在" : "不存在"));
 
         if (authorization == null || !authorization.startsWith(BusinessConstant.TOKEN_PREFIX)) {
+            // 如果是可选验证路径，没有token也放行
+            if (isOptionalAuthPath) {
+                return true;
+            }
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_EMPTY);
@@ -36,6 +48,10 @@ public class JWTInterceptor implements HandlerInterceptor {
 
         // 1. 验证JWT AccessToken是否有效
         if (!JWTUtil.validateAccessToken(accessToken)) {
+            // 如果是可选验证路径，token过期也放行
+            if (isOptionalAuthPath) {
+                return true;
+            }
             // AccessToken已过期，检查是否需要返回特定错误码以便前端刷新
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
@@ -47,6 +63,10 @@ public class JWTInterceptor implements HandlerInterceptor {
 
         // 2. 检查AccessToken是否在黑名单中
         if (tokenService.isAccessTokenBlacklisted(accessToken)) {
+            // 如果是可选验证路径，token在黑名单也放行
+            if (isOptionalAuthPath) {
+                return true;
+            }
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_BLACKLISTED);
@@ -55,7 +75,15 @@ public class JWTInterceptor implements HandlerInterceptor {
         }
 
         // 3. 检查AccessToken是否在存储中存在（可选，用于单点登录控制）
-        if (!tokenService.isAccessTokenValid(accessToken)) {
+        boolean isValid = tokenService.isAccessTokenValid(accessToken);
+        System.out.println("JWTInterceptor - Token是否有效: " + isValid);
+        if (!isValid) {
+            // 如果是可选验证路径，token无效也放行
+            if (isOptionalAuthPath) {
+                System.out.println("JWTInterceptor - 可选路径，Token无效也放行");
+                return true;
+            }
+            System.out.println("JWTInterceptor - Token无效，返回401");
             response.setStatus(ErrorCodeConstant.HTTP_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             ResponseVO<String> errorResponse = ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.UNAUTHORIZED);
@@ -66,6 +94,7 @@ public class JWTInterceptor implements HandlerInterceptor {
         // 4. 从AccessToken中提取用户ID并设置到request属性中
         Long userId = JWTUtil.getUserIdFromAccessToken(accessToken);
         request.setAttribute("userId", userId);
+        System.out.println("JWTInterceptor - 设置userId: " + userId);
 
         // 5. 检查AccessToken是否即将过期，如果是，在响应头中告知前端
         if (JWTUtil.isAccessTokenExpiringSoon(accessToken)) {

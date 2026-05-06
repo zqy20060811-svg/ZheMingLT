@@ -5,8 +5,11 @@ import com.zheminglt.constant.ErrorCodeConstant;
 import com.zheminglt.constant.MessageConstant;
 import com.zheminglt.dto.UserDTO;
 import com.zheminglt.dto.LoginDTO;
+import com.zheminglt.dto.UpdateUsernameDTO;
+import com.zheminglt.service.OSSService;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.service.UserService;
+import com.zheminglt.utils.JWTUtil;
 import com.zheminglt.vo.LoginVO;
 import com.zheminglt.vo.ResponseVO;
 import com.zheminglt.vo.TokenRefreshVO;
@@ -15,8 +18,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -30,6 +35,9 @@ public class UserController {
 
     @Autowired
     private TokenService tokenService;
+
+    @Autowired
+    private OSSService ossService;
 
     @Operation(summary = "测试接口", description = "测试服务是否正常运行")
     @GetMapping("/test")
@@ -112,21 +120,60 @@ public class UserController {
         return userService.getUserStats(userId);
     }
 
-    @Operation(summary = "获取用户资料", description = "获取当前登录用户的完整资料信息")
+    @Operation(summary = "根据ID获取用户信息", description = "根据用户ID获取用户的公开信息")
+    @GetMapping("/{userId}")
+    public ResponseVO<UserVO> getUserById(@Parameter(description = "用户ID") @PathVariable Long userId) {
+        return userService.getUserById(userId);
+    }
+
+    @Operation(summary = "获取用户统计（公开）", description = "根据用户ID获取用户的统计数据")
+    @GetMapping("/{userId}/stats")
+    public ResponseVO<com.zheminglt.vo.UserStatsVO> getUserStatsById(@Parameter(description = "用户ID") @PathVariable Long userId) {
+        return userService.getUserStats(userId);
+    }
+
+    @Operation(summary = "获取当前登录用户信息", description = "获取当前登录用户的详细信息，需要登录")
     @SecurityRequirement(name = "Authorization")
     @GetMapping("/profile")
-    public ResponseVO<UserVO> getUserProfile(@Parameter(hidden = true) @RequestAttribute("userId") Long userId) {
+    public ResponseVO<UserVO> getUserProfile(HttpServletRequest request) {
+        // 从请求头中获取token
+        String authorization = request.getHeader(BusinessConstant.TOKEN_HEADER);
+        if (authorization == null || !authorization.startsWith(BusinessConstant.TOKEN_PREFIX)) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_EMPTY);
+        }
+        
+        String accessToken = authorization.substring(BusinessConstant.TOKEN_PREFIX.length());
+        
+        // 验证token
+        if (!JWTUtil.validateAccessToken(accessToken)) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_TOKEN_EXPIRED, MessageConstant.TOKEN_EXPIRED);
+        }
+        
+        // 从token中获取userId
+        Long userId = JWTUtil.getUserIdFromAccessToken(accessToken);
         return userService.getUserInfo(userId);
     }
 
-    // ==================== 用户互动相关接口 ====================
-
-    @Operation(summary = "根据ID获取用户信息", description = "获取指定用户的公开信息")
-    @GetMapping("/{userId}")
-    public ResponseVO<UserVO> getUserById(
-            @Parameter(description = "用户ID") @PathVariable Long userId) {
-        return userService.getUserById(userId);
+    @Operation(summary = "上传头像", description = "上传用户头像到阿里云OSS")
+    @SecurityRequirement(name = "Authorization")
+    @PostMapping("/avatar")
+    public ResponseVO<UserVO> uploadAvatar(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @RequestParam("file") MultipartFile file) {
+        String avatarUrl = ossService.uploadAvatar(file, userId);
+        return userService.updateAvatar(userId, avatarUrl);
     }
+
+    @Operation(summary = "修改用户名", description = "修改当前登录用户的用户名")
+    @SecurityRequirement(name = "Authorization")
+    @PutMapping("/username")
+    public ResponseVO<UserVO> updateUsername(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @RequestBody UpdateUsernameDTO dto) {
+        return userService.updateUsername(userId, dto.getUsername());
+    }
+
+    // ==================== 用户互动相关接口 ====================
 
     @Operation(summary = "获取用户的点赞列表", description = "获取指定用户点赞的帖子和评论列表")
     @SecurityRequirement(name = "Authorization")
@@ -148,8 +195,7 @@ public class UserController {
         return userService.getUserFavorites(userId, page, size);
     }
 
-    @Operation(summary = "获取用户的帖子列表", description = "获取指定用户发布的帖子列表")
-    @SecurityRequirement(name = "Authorization")
+    @Operation(summary = "获取用户的帖子列表", description = "获取指定用户发布的帖子列表（公开接口）")
     @GetMapping("/{userId}/posts")
     public ResponseVO<com.zheminglt.vo.PageVO<com.zheminglt.vo.PostVO>> getUserPosts(
             @Parameter(description = "用户ID") @PathVariable Long userId,

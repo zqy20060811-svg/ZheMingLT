@@ -1,171 +1,211 @@
 <template>
-  <div class="search-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- 动态背景 -->
-    <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
+  <div class="manor-search" :class="{ 'night-mode': isDarkMode }">
+    <!-- 庄园背景 -->
+    <ManorBackground :isDarkMode="isDarkMode" />
 
     <!-- 顶部导航 -->
-    <nav class="top-nav">
-      <div class="nav-brand" @click="goHome">
-        <div class="logo-wrapper">
-          <i class="bi bi-lightbulb-fill"></i>
-        </div>
-        <span class="brand-text">择明论坛</span>
-      </div>
-      <div class="nav-actions">
-        <button class="btn-icon theme-btn" @click="toggleTheme">
-          <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+    <nav class="search-top-nav">
+      <div class="nav-left">
+        <button class="back-btn" @click="goHome">
+          <i class="bi bi-arrow-left"></i>
         </button>
+        <div class="nav-brand" @click="goHome">
+          <i class="bi bi-house-heart-fill"></i>
+          <span>择明庄园</span>
+        </div>
       </div>
+      <button class="theme-btn" @click="toggleTheme">
+        <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill'"></i>
+      </button>
     </nav>
 
-    <!-- 搜索区域 -->
-    <div class="search-section">
-      <div class="search-box">
-        <i class="bi bi-search search-icon"></i>
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="搜索帖子标题或内容..."
-          @keyup.enter="handleSearch"
-        />
-        <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
-          <i class="bi bi-x-circle-fill"></i>
-        </button>
-        <button class="search-btn" @click="handleSearch">搜索</button>
-      </div>
-
-      <!-- 筛选选项 -->
-      <div class="filter-bar">
-        <div class="filter-group">
-          <span class="filter-label">分类：</span>
-          <select v-model="selectedCategory" class="filter-select" @change="handleSearch">
-            <option value="">全部分类</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">排序：</span>
-          <div class="sort-options">
-            <button
-              :class="['sort-btn', { active: sortBy === 'time' }]"
-              @click="changeSort('time')"
-            >
-              <i class="bi bi-clock"></i> 最新
-            </button>
-            <button
-              :class="['sort-btn', { active: sortBy === 'hot' }]"
-              @click="changeSort('hot')"
-            >
-              <i class="bi bi-fire"></i> 最热
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 搜索结果 -->
-    <div class="results-section">
-      <!-- 搜索提示 -->
-      <div v-if="!hasSearched" class="search-tips">
-        <div class="tips-icon">
-          <i class="bi bi-search-heart"></i>
-        </div>
-        <h3>开始搜索</h3>
-        <p>输入关键词，发现感兴趣的帖子</p>
-        <div class="hot-keywords">
-          <span class="keyword-label">热门搜索：</span>
-          <span
-            v-for="keyword in hotKeywords"
-            :key="keyword"
-            class="keyword-tag"
-            @click="quickSearch(keyword)"
-          >
-            {{ keyword }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 加载中 -->
-      <div v-else-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>搜索中...</p>
-      </div>
-
-      <!-- 无结果 -->
-      <div v-else-if="results.length === 0" class="empty-state">
-        <div class="empty-icon">
-          <i class="bi bi-inbox"></i>
-        </div>
-        <h3>未找到相关帖子</h3>
-        <p>换个关键词试试</p>
-      </div>
-
-      <!-- 结果列表 -->
-      <div v-else class="results-list">
-        <div class="results-header">
-          <span class="results-count">找到 {{ total }} 个结果</span>
-        </div>
-        <div
-          v-for="post in results"
-          :key="post.id"
-          class="result-card"
-          @click="goToPost(post.id)"
-        >
-          <div class="result-header">
-            <span class="category-tag">{{ post.categoryName }}</span>
-            <span class="post-time">{{ formatTime(post.createdAt) }}</span>
-          </div>
-          <h3 class="result-title" v-html="highlightText(post.title)"></h3>
-          <p class="result-content" v-html="highlightText(truncateContent(post.content))"></p>
-          <div class="result-footer">
-            <div class="author-info">
-              <i class="bi bi-person-circle"></i>
-              <span>{{ post.authorName }}</span>
+    <!-- 主内容 -->
+    <main class="search-content">
+      <!-- 搜索区域 -->
+      <div class="search-section">
+        <div class="search-card">
+          <div class="search-header">
+            <div class="header-icon">
+              <i class="bi bi-search-heart"></i>
             </div>
-            <div class="post-stats">
-              <span class="stat-item">
-                <i class="bi bi-eye"></i> {{ post.viewCount || 0 }}
+            <div class="header-text">
+              <h1>探索庄园</h1>
+              <p>寻找你感兴趣的话题与故事</p>
+            </div>
+          </div>
+
+          <!-- 搜索框 -->
+          <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="搜索帖子标题或内容..."
+              @keyup.enter="handleSearch"
+            />
+            <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+            <button class="search-btn" @click="handleSearch">
+              <i class="bi bi-search"></i>
+              <span>搜索</span>
+            </button>
+          </div>
+
+          <!-- 筛选栏 -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">
+                <i class="bi bi-grid"></i>
+                分类
               </span>
-              <span class="stat-item">
-                <i class="bi bi-heart"></i> {{ post.likeCount || 0 }}
+              <select v-model="selectedCategory" class="filter-select" @change="handleSearch">
+                <option value="">全部分类</option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                  {{ cat.name }}
+                </option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">
+                <i class="bi bi-sort-down"></i>
+                排序
               </span>
-              <span class="stat-item">
-                <i class="bi bi-chat"></i> {{ post.commentCount || 0 }}
+              <div class="sort-options">
+                <button
+                  :class="['sort-btn', { active: sortBy === 'time' }]"
+                  @click="changeSort('time')"
+                >
+                  <i class="bi bi-clock"></i>
+                  <span>最新</span>
+                </button>
+                <button
+                  :class="['sort-btn', { active: sortBy === 'hot' }]"
+                  @click="changeSort('hot')"
+                >
+                  <i class="bi bi-fire"></i>
+                  <span>最热</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索结果 -->
+      <div class="results-section">
+        <!-- 搜索提示 -->
+        <div v-if="!hasSearched" class="search-tips">
+          <div class="tips-icon">
+            <i class="bi bi-flower1"></i>
+          </div>
+          <h3>开始探索</h3>
+          <p>在庄园中寻找你感兴趣的内容</p>
+          <div class="hot-keywords">
+            <span class="keyword-label">
+              <i class="bi bi-stars"></i>
+              热门搜索
+            </span>
+            <div class="keywords-list">
+              <span
+                v-for="keyword in hotKeywords"
+                :key="keyword"
+                class="keyword-tag"
+                @click="quickSearch(keyword)"
+              >
+                {{ keyword }}
               </span>
             </div>
           </div>
         </div>
 
-        <!-- 分页 -->
-        <div v-if="pages > 1" class="pagination">
-          <button
-            :disabled="page <= 1"
-            class="page-btn"
-            @click="changePage(page - 1)"
-          >
-            <i class="bi bi-chevron-left"></i>
-          </button>
-          <span class="page-info">{{ page }} / {{ pages }}</span>
-          <button
-            :disabled="page >= pages"
-            class="page-btn"
-            @click="changePage(page + 1)"
-          >
-            <i class="bi bi-chevron-right"></i>
-          </button>
+        <!-- 加载中 -->
+        <div v-else-if="loading" class="loading-state">
+          <div class="loading-flower">
+            <i class="bi bi-flower2"></i>
+          </div>
+          <span>搜索中...</span>
+        </div>
+
+        <!-- 无结果 -->
+        <div v-else-if="results.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <i class="bi bi-flower3"></i>
+          </div>
+          <h3>未找到相关内容</h3>
+          <p>换个关键词试试，或许会有新的发现</p>
+        </div>
+
+        <!-- 结果列表 -->
+        <div v-else class="results-list">
+          <div class="results-header">
+            <span class="results-count">
+              <i class="bi bi-check-circle-fill"></i>
+              找到 {{ total }} 个结果
+            </span>
+          </div>
+
+          <div class="posts-grid">
+            <article
+              v-for="post in results"
+              :key="post.id"
+              class="post-card"
+              @click="goToPost(post.id)"
+            >
+              <div class="card-header">
+                <span class="category-badge">{{ post.categoryName }}</span>
+                <span class="post-time">{{ formatTime(post.createdAt) }}</span>
+              </div>
+              <h3 class="post-title" v-html="highlightText(post.title)"></h3>
+              <p class="post-summary" v-html="highlightText(truncateContent(post.content))"></p>
+              <div class="card-footer">
+                <div class="author-info">
+                  <div class="author-avatar">
+                    <img v-if="post.authorAvatar" :src="post.authorAvatar" />
+                    <i v-else class="bi bi-person-fill"></i>
+                  </div>
+                  <span class="author-name">{{ post.authorName }}</span>
+                </div>
+                <div class="post-stats">
+                  <span class="stat-item">
+                    <i class="bi bi-eye"></i> {{ post.viewCount || 0 }}
+                  </span>
+                  <span class="stat-item">
+                    <i class="bi bi-heart"></i> {{ post.likeCount || 0 }}
+                  </span>
+                  <span class="stat-item">
+                    <i class="bi bi-chat"></i> {{ post.commentCount || 0 }}
+                  </span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- 分页 -->
+          <div v-if="pages > 1" class="pagination">
+            <button
+              :disabled="page <= 1"
+              class="page-btn"
+              @click="changePage(page - 1)"
+            >
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="page-info">{{ page }} / {{ pages }}</span>
+            <button
+              :disabled="page >= pages"
+              class="page-btn"
+              @click="changePage(page + 1)"
+            >
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- 底部导航 -->
-    <BottomNav />
+    <ManorBottomNav :isDarkMode="isDarkMode" />
   </div>
 </template>
 
@@ -173,7 +213,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { get } from '@/utils/request'
-import BottomNav from '@/components/BottomNav.vue'
+import ManorBackground from '@/components/ManorBackground.vue'
+import ManorBottomNav from '@/components/ManorBottomNav.vue'
 
 const router = useRouter()
 
@@ -312,7 +353,7 @@ function highlightText(text) {
 // 截断内容
 function truncateContent(content) {
   if (!content) return ''
-  return content.length > 150 ? content.substring(0, 150) + '...' : content
+  return content.length > 100 ? content.substring(0, 100) + '...' : content
 }
 
 // 格式化时间
@@ -346,129 +387,48 @@ function toggleTheme() {
 </script>
 
 <style scoped>
-.search-page {
+.manor-search {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   position: relative;
-  padding-bottom: 80px;
+  padding-bottom: 100px;
 }
 
-.dark-mode {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-}
-
-/* 动态背景 */
-.animated-bg {
+/* 顶部导航 */
+.search-top-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: float 20s infinite ease-in-out;
-}
-
-.orb-1 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -100px;
-  right: -100px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: 20%;
-  left: -50px;
-  animation-delay: -7s;
-}
-
-.orb-3 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 40%;
-  right: 10%;
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-}
-
-/* 顶部导航 */
-.top-nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 115, 85, 0.15);
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 0 20px;
+  z-index: 100;
 }
 
-.dark-mode .top-nav {
-  background: rgba(30, 30, 50, 0.8);
-  border-bottom-color: rgba(255, 255, 255, 0.05);
+.night-mode .search-top-nav {
+  background: rgba(30, 35, 45, 0.9);
+  border-bottom-color: rgba(100, 110, 130, 0.2);
 }
 
-.nav-brand {
+.nav-left {
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
+  gap: 16px;
 }
 
-.logo-wrapper {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-}
-
-.brand-text {
-  font-size: 20px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.nav-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-icon {
+.back-btn {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 10px;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  border-radius: 50%;
+  background: rgba(139, 115, 85, 0.1);
+  color: #8B7355;
+  font-size: 18px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -476,45 +436,156 @@ function toggleTheme() {
   justify-content: center;
 }
 
-.btn-icon:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  transform: translateY(-2px);
+.night-mode .back-btn {
+  background: rgba(200, 180, 150, 0.1);
+  color: #D4C596;
 }
 
-.dark-mode .btn-icon {
-  background: rgba(255, 255, 255, 0.1);
-  color: #a0a0c0;
+.back-btn:hover {
+  background: rgba(139, 115, 85, 0.2);
+  transform: translateX(-2px);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #5a7c5a;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+}
+
+.night-mode .nav-brand {
+  color: #8ab88a;
+}
+
+.nav-brand i {
+  font-size: 24px;
+  color: #8FBC8F;
+}
+
+.night-mode .nav-brand i {
+  color: #7ac87a;
+}
+
+.theme-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(139, 115, 85, 0.1);
+  color: #8B7355;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.night-mode .theme-btn {
+  background: rgba(200, 180, 150, 0.1);
+  color: #D4C596;
+}
+
+.theme-btn:hover {
+  background: rgba(139, 115, 85, 0.2);
+  transform: rotate(15deg);
+}
+
+/* 主内容 */
+.search-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 90px 20px 40px;
+  position: relative;
+  z-index: 1;
 }
 
 /* 搜索区域 */
 .search-section {
-  position: relative;
-  z-index: 1;
-  padding: 30px 20px;
+  margin-bottom: 32px;
 }
 
-.search-box {
-  position: relative;
-  max-width: 600px;
-  margin: 0 auto 20px;
+.search-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
+}
+
+.night-mode .search-card {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
+}
+
+.search-header {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  padding: 5px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.dark-mode .search-box {
-  background: rgba(40, 40, 60, 0.9);
-  border-color: rgba(255, 255, 255, 0.1);
+.header-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+}
+
+.header-text h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+  font-family: 'Georgia', serif;
+  margin-bottom: 4px;
+}
+
+.night-mode .header-text h1 {
+  color: #e2e8f0;
+}
+
+.header-text p {
+  font-size: 14px;
+  color: #6a7c6a;
+}
+
+.night-mode .header-text p {
+  color: #9ab89a;
+}
+
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(139, 188, 143, 0.08);
+  border-radius: 16px;
+  padding: 6px 6px 6px 16px;
+  margin-bottom: 20px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.night-mode .search-box {
+  background: rgba(74, 124, 90, 0.1);
+}
+
+.search-box:focus-within {
+  border-color: #8FBC8F;
+  background: rgba(139, 188, 143, 0.12);
 }
 
 .search-icon {
-  padding: 0 15px;
-  color: #667eea;
+  color: #8FBC8F;
   font-size: 20px;
 }
 
@@ -524,30 +595,38 @@ function toggleTheme() {
   background: none;
   padding: 12px 0;
   font-size: 16px;
-  color: #333;
+  color: #2d3748;
   outline: none;
 }
 
-.dark-mode .search-input {
-  color: #e0e0e0;
+.night-mode .search-input {
+  color: #e2e8f0;
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: #8a9a8a;
 }
 
 .clear-btn {
   border: none;
   background: none;
-  color: #999;
+  color: #8a9a8a;
   cursor: pointer;
   padding: 8px;
   font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+  color: #ff6b6b;
 }
 
 .search-btn {
-  padding: 10px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   border: none;
   border-radius: 12px;
@@ -558,50 +637,57 @@ function toggleTheme() {
 
 .search-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(124, 184, 124, 0.4);
 }
 
 /* 筛选栏 */
 .filter-bar {
-  max-width: 600px;
-  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 16px;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
-  color: #666;
+  color: #5a7c5a;
+  font-weight: 500;
 }
 
-.dark-mode .filter-label {
-  color: #a0a0c0;
+.night-mode .filter-label {
+  color: #8ab88a;
 }
 
 .filter-select {
-  padding: 8px 12px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(139, 188, 143, 0.3);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.8);
-  color: #333;
+  color: #2d3748;
   font-size: 14px;
   cursor: pointer;
   outline: none;
+  transition: all 0.3s ease;
 }
 
-.dark-mode .filter-select {
-  background: rgba(40, 40, 60, 0.8);
-  color: #e0e0e0;
-  border-color: rgba(255, 255, 255, 0.1);
+.night-mode .filter-select {
+  background: rgba(40, 45, 55, 0.8);
+  color: #e2e8f0;
+  border-color: rgba(74, 124, 90, 0.3);
+}
+
+.filter-select:focus {
+  border-color: #8FBC8F;
 }
 
 .sort-options {
@@ -610,27 +696,27 @@ function toggleTheme() {
 }
 
 .sort-btn {
-  padding: 8px 16px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid rgba(139, 188, 143, 0.3);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.5);
-  color: #666;
+  color: #6a7c6a;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
-.dark-mode .sort-btn {
-  background: rgba(40, 40, 60, 0.5);
-  color: #a0a0c0;
-  border-color: rgba(255, 255, 255, 0.1);
+.night-mode .sort-btn {
+  background: rgba(40, 45, 55, 0.5);
+  color: #9ab89a;
+  border-color: rgba(74, 124, 90, 0.3);
 }
 
 .sort-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   border-color: transparent;
 }
@@ -639,70 +725,102 @@ function toggleTheme() {
 .results-section {
   position: relative;
   z-index: 1;
-  padding: 0 20px 30px;
-  max-width: 800px;
-  margin: 0 auto;
 }
 
 /* 搜索提示 */
 .search-tips {
   text-align: center;
   padding: 60px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
+}
+
+.night-mode .search-tips {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
 .tips-icon {
   font-size: 64px;
-  color: #667eea;
-  opacity: 0.5;
+  color: #8FBC8F;
   margin-bottom: 20px;
+}
+
+.night-mode .tips-icon {
+  color: #7ac87a;
 }
 
 .search-tips h3 {
   font-size: 24px;
-  color: #333;
-  margin-bottom: 10px;
+  color: #2d3748;
+  margin-bottom: 8px;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .search-tips h3 {
-  color: #e0e0e0;
+.night-mode .search-tips h3 {
+  color: #e2e8f0;
 }
 
 .search-tips p {
-  color: #999;
-  margin-bottom: 30px;
+  color: #6a7c6a;
+  margin-bottom: 32px;
+}
+
+.night-mode .search-tips p {
+  color: #9ab89a;
 }
 
 .hot-keywords {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
+  flex-direction: column;
   align-items: center;
+  gap: 16px;
 }
 
 .keyword-label {
-  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5a7c5a;
   font-size: 14px;
+  font-weight: 500;
 }
 
-.dark-mode .keyword-label {
-  color: #a0a0c0;
+.night-mode .keyword-label {
+  color: #8ab88a;
+}
+
+.keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
 .keyword-tag {
-  padding: 6px 14px;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  padding: 8px 16px;
+  background: rgba(139, 188, 143, 0.15);
+  color: #5a7c5a;
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
+  border: 1px solid rgba(139, 188, 143, 0.2);
+}
+
+.night-mode .keyword-tag {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
+  border-color: rgba(74, 124, 90, 0.3);
 }
 
 .keyword-tag:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   transform: translateY(-2px);
+  border-color: transparent;
 }
 
 /* 加载和空状态 */
@@ -710,40 +828,62 @@ function toggleTheme() {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(102, 126, 234, 0.2);
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+.night-mode .loading-state,
+.night-mode .empty-state {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.loading-flower {
+  font-size: 48px;
+  color: #8FBC8F;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+}
+
+.loading-state span {
+  color: #6a7c6a;
+}
+
+.night-mode .loading-state span {
+  color: #9ab89a;
 }
 
 .empty-icon {
   font-size: 64px;
-  color: #ccc;
+  color: #8FBC8F;
   margin-bottom: 20px;
+  opacity: 0.6;
 }
 
 .empty-state h3 {
   font-size: 20px;
-  color: #666;
-  margin-bottom: 10px;
+  color: #2d3748;
+  margin-bottom: 8px;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .empty-state h3 {
-  color: #a0a0c0;
+.night-mode .empty-state h3 {
+  color: #e2e8f0;
 }
 
 .empty-state p {
-  color: #999;
+  color: #6a7c6a;
+}
+
+.night-mode .empty-state p {
+  color: #9ab89a;
 }
 
 /* 结果列表 */
@@ -753,126 +893,178 @@ function toggleTheme() {
 }
 
 .results-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  color: #666;
+  color: #5a7c5a;
+  font-weight: 500;
 }
 
-.dark-mode .results-count {
-  color: #a0a0c0;
+.night-mode .results-count {
+  color: #8ab88a;
 }
 
-.result-card {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 15px;
+.results-count i {
+  color: #8FBC8F;
+}
+
+/* 帖子网格 */
+.posts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 24px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(139, 188, 143, 0.2);
 }
 
-.dark-mode .result-card {
-  background: rgba(40, 40, 60, 0.9);
-  border-color: rgba(255, 255, 255, 0.05);
+.night-mode .post-card {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
-.result-card:hover {
+.post-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
-.result-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.category-tag {
-  padding: 4px 10px;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  border-radius: 6px;
+.category-badge {
+  padding: 4px 12px;
+  background: rgba(139, 188, 143, 0.15);
+  color: #5a7c5a;
+  border-radius: 20px;
   font-size: 12px;
+  font-weight: 500;
+}
+
+.night-mode .category-badge {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
 }
 
 .post-time {
   font-size: 12px;
-  color: #999;
+  color: #8a9a8a;
 }
 
-.result-title {
+.night-mode .post-time {
+  color: #7a9a8a;
+}
+
+.post-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: #2d3748;
   margin-bottom: 10px;
   line-height: 1.4;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .result-title {
-  color: #e0e0e0;
+.night-mode .post-title {
+  color: #e2e8f0;
 }
 
-.result-title :deep(mark) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.post-title :deep(mark) {
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
 }
 
-.result-content {
+.post-summary {
   font-size: 14px;
-  color: #666;
+  color: #6a7c6a;
   line-height: 1.6;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
-.dark-mode .result-content {
-  color: #a0a0c0;
+.night-mode .post-summary {
+  color: #9ab89a;
 }
 
-.result-content :deep(mark) {
-  background: rgba(102, 126, 234, 0.3);
+.post-summary :deep(mark) {
+  background: rgba(139, 188, 143, 0.4);
   color: inherit;
   padding: 2px 4px;
   border-radius: 4px;
 }
 
-.result-footer {
+.card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 15px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 16px;
+  border-top: 1px solid rgba(139, 188, 143, 0.15);
 }
 
-.dark-mode .result-footer {
-  border-top-color: rgba(255, 255, 255, 0.05);
+.night-mode .card-footer {
+  border-top-color: rgba(74, 124, 90, 0.2);
 }
 
 .author-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #666;
-  font-size: 14px;
+  gap: 8px;
 }
 
-.dark-mode .author-info {
-  color: #a0a0c0;
+.author-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(139, 188, 143, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5a7c5a;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.author-name {
+  font-size: 14px;
+  color: #5a7c5a;
+  font-weight: 500;
+}
+
+.night-mode .author-name {
+  color: #8ab88a;
 }
 
 .post-stats {
   display: flex;
-  gap: 15px;
+  gap: 16px;
 }
 
 .stat-item {
   font-size: 13px;
-  color: #999;
+  color: #8a9a8a;
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.night-mode .stat-item {
+  color: #7a9a8a;
 }
 
 /* 分页 */
@@ -881,51 +1073,85 @@ function toggleTheme() {
   justify-content: center;
   align-items: center;
   gap: 20px;
-  margin-top: 30px;
+  margin-top: 32px;
   padding: 20px;
 }
 
 .page-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.8);
-  color: #667eea;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(139, 188, 143, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #5a7c5a;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
 }
 
-.dark-mode .page-btn {
-  background: rgba(40, 40, 60, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
+.night-mode .page-btn {
+  background: rgba(40, 45, 55, 0.9);
+  border-color: rgba(74, 124, 90, 0.3);
+  color: #8ab88a;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   border-color: transparent;
 }
 
 .page-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .page-info {
   font-size: 14px;
-  color: #666;
+  color: #5a7c5a;
+  font-weight: 500;
 }
 
-.dark-mode .page-info {
-  color: #a0a0c0;
+.night-mode .page-info {
+  color: #8ab88a;
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
+  .search-content {
+    padding: 80px 16px 40px;
+  }
+
+  .search-card {
+    padding: 24px 20px;
+  }
+
+  .search-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+
+  .search-box {
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    min-width: 0;
+  }
+
+  .search-btn span {
+    display: none;
+  }
+
   .filter-bar {
     flex-direction: column;
     align-items: stretch;
@@ -940,9 +1166,13 @@ function toggleTheme() {
     justify-content: flex-end;
   }
 
-  .result-footer {
+  .post-card {
+    padding: 20px 16px;
+  }
+
+  .card-footer {
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     align-items: flex-start;
   }
 }

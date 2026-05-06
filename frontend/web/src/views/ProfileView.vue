@@ -1,238 +1,211 @@
 <template>
-  <div class="profile-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- 动态背景 -->
-    <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
-
-    <!-- 粒子效果 -->
-    <div class="particles" ref="particlesRef"></div>
+  <div class="manor-profile" :class="{ 'night-mode': isDarkMode }">
+    <!-- 庄园背景 -->
+    <ManorBackground :isDarkMode="isDarkMode" />
 
     <!-- 顶部导航 -->
-    <nav class="top-nav">
+    <nav class="profile-top-nav">
       <div class="nav-brand">
-        <div class="brand-icon">
-          <i class="bi bi-person-fill"></i>
-        </div>
-        <span class="brand-text">个人中心</span>
+        <i class="bi bi-person-heart"></i>
+        <span>个人中心</span>
       </div>
-      <button class="btn-icon theme-btn" @click="toggleTheme">
-        <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+      <button class="theme-btn" @click="toggleTheme">
+        <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill'"></i>
       </button>
     </nav>
 
-    <!-- 用户信息卡片 -->
-    <div class="user-card-section">
-      <div class="user-card">
-        <div class="card-bg">
-          <div class="bg-pattern"></div>
-          <div class="bg-glow"></div>
-        </div>
-
-        <div class="card-content">
+    <!-- 主内容 -->
+    <main class="profile-content">
+      <!-- 用户信息卡片 -->
+      <div class="user-profile-card">
+        <div class="card-header-bg"></div>
+        <div class="card-body">
           <div class="user-header">
-            <div class="avatar-wrapper">
+            <div class="avatar-wrapper" @click="triggerAvatarUpload" v-if="isLoggedIn">
               <img :src="user.avatar || defaultAvatar" class="user-avatar" />
-              <div class="avatar-ring"></div>
-              <div class="online-status" v-if="isLoggedIn"></div>
+              <div class="avatar-upload-overlay">
+                <i class="bi bi-camera-fill"></i>
+              </div>
+              <div class="avatar-badge" v-if="isLoggedIn">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+              <input
+                ref="avatarInput"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="handleAvatarChange"
+              />
             </div>
-
+            <div class="avatar-wrapper" v-else>
+              <img :src="user.avatar || defaultAvatar" class="user-avatar" />
+            </div>
             <div class="user-info">
-              <h3 class="username">{{ user.username || '游客' }}</h3>
+              <div class="username-row" v-if="isLoggedIn">
+                <h3 v-if="!editingUsername" class="username">{{ user.username || '游客' }}</h3>
+                <input
+                  v-else
+                  v-model="newUsername"
+                  class="username-input"
+                  maxlength="20"
+                  @keyup.enter="saveUsername"
+                  @keyup.esc="cancelEditUsername"
+                  ref="usernameInput"
+                />
+                <button v-if="!editingUsername" class="edit-name-btn" @click="startEditUsername">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <div v-else class="edit-actions">
+                  <button class="save-btn" @click="saveUsername">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="cancel-btn" @click="cancelEditUsername">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+              <h3 v-else class="username">{{ user.username || '游客' }}</h3>
               <p class="user-id" v-if="isLoggedIn">ID: {{ user.id || '000000' }}</p>
               <p class="user-bio">{{ user.bio || '这个人很懒，什么都没写~' }}</p>
             </div>
-
-            <button v-if="isLoggedIn" class="btn-edit" @click="editProfile">
+            <button v-if="isLoggedIn" class="edit-btn" @click="editProfile">
               <i class="bi bi-pencil-square"></i>
-              <span>编辑</span>
             </button>
           </div>
 
-          <!-- 等级徽章 -->
-          <div class="level-badge" v-if="isLoggedIn">
-            <div class="level-icon">
+          <!-- 等级 -->
+          <div class="level-bar" v-if="isLoggedIn">
+            <div class="level-info">
               <i class="bi bi-stars"></i>
+              <span>等级 {{ Math.floor((stats.posts || 0) / 10) + 1 }}</span>
             </div>
-            <span class="level-text">Lv.{{ Math.floor((stats.posts || 0) / 10) + 1 }}</span>
-            <div class="level-progress">
-              <div class="progress-bar" :style="{ width: `${((stats.posts || 0) % 10) * 10}%` }"></div>
+            <div class="progress-track">
+              <div class="progress-fill" :style="{ width: `${((stats.posts || 0) % 10) * 10}%` }"></div>
             </div>
           </div>
 
           <!-- 统计数据 -->
-          <div class="user-stats">
-            <div class="stat-item" @click="goToMyPosts">
-              <div class="stat-icon posts">
-                <i class="bi bi-file-text-fill"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value">{{ formatNumber(stats.posts || 0) }}</span>
-                <span class="stat-label">帖子</span>
-              </div>
+          <div class="stats-grid">
+            <div class="stat-box" @click="goToMyPosts">
+              <span class="stat-num">{{ formatNumber(stats.posts || 0) }}</span>
+              <span class="stat-label">帖子</span>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item" @click="goToMyLikes">
-              <div class="stat-icon likes">
-                <i class="bi bi-heart-fill"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value">{{ formatNumber(stats.likes || 0) }}</span>
-                <span class="stat-label">获赞</span>
-              </div>
+            <div class="stat-box" @click="goToMyLikes">
+              <span class="stat-num">{{ formatNumber(stats.likes || 0) }}</span>
+              <span class="stat-label">获赞</span>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item" @click="goToFollowing">
-              <div class="stat-icon following">
-                <i class="bi bi-people-fill"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value">{{ formatNumber(stats.following || 0) }}</span>
-                <span class="stat-label">关注</span>
-              </div>
+            <div class="stat-box">
+              <span class="stat-num">{{ formatNumber(stats.following || 0) }}</span>
+              <span class="stat-label">关注</span>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item" @click="goToFollowers">
-              <div class="stat-icon followers">
-                <i class="bi bi-person-heart"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value">{{ formatNumber(stats.followers || 0) }}</span>
-                <span class="stat-label">粉丝</span>
-              </div>
+            <div class="stat-box">
+              <span class="stat-num">{{ formatNumber(stats.followers || 0) }}</span>
+              <span class="stat-label">粉丝</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 功能菜单 -->
-    <div class="menu-section">
-      <!-- 内容管理 -->
-      <div class="menu-group">
-        <div class="group-header">
-          <div class="group-icon">
+      <!-- 功能菜单 -->
+      <div class="menu-section">
+        <!-- 内容管理 -->
+        <div class="menu-group">
+          <div class="group-title">
             <i class="bi bi-grid-fill"></i>
+            <span>内容管理</span>
           </div>
-          <span class="group-title">内容管理</span>
-        </div>
-        <div class="menu-grid">
-          <div class="menu-card" @click="goToMyPosts">
-            <div class="card-glow"></div>
-            <div class="menu-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-              <i class="bi bi-file-text"></i>
-            </div>
-            <span class="menu-title">我的帖子</span>
-            <span class="menu-desc">{{ stats.posts || 0 }} 篇</span>
-          </div>
-          <div class="menu-card" @click="goToMyComments">
-            <div class="card-glow"></div>
-            <div class="menu-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-              <i class="bi bi-chat-dots"></i>
-            </div>
-            <span class="menu-title">我的评论</span>
-            <span class="menu-desc">查看全部</span>
-          </div>
-          <div class="menu-card" @click="goToMyCollections">
-            <div class="card-glow"></div>
-            <div class="menu-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-              <i class="bi bi-bookmark-star"></i>
-            </div>
-            <span class="menu-title">我的收藏</span>
-            <span class="menu-desc">精彩内容</span>
-          </div>
-          <div class="menu-card" @click="goToHistory">
-            <div class="card-glow"></div>
-            <div class="menu-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-              <i class="bi bi-clock-history"></i>
-            </div>
-            <span class="menu-title">浏览历史</span>
-            <span class="menu-desc">最近浏览</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 设置 -->
-      <div class="menu-group">
-        <div class="group-header">
-          <div class="group-icon">
-            <i class="bi bi-gear-fill"></i>
-          </div>
-          <span class="group-title">设置</span>
-        </div>
-        <div class="settings-list">
-          <div class="settings-item" @click="toggleTheme">
-            <div class="item-left">
-              <div class="item-icon" :style="{ background: isDarkMode ? 'linear-gradient(135deg, #feca57 0%, #ff9ff3 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
-                <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+          <div class="menu-list">
+            <div class="menu-item" @click="goToMyPosts">
+              <div class="item-icon" style="background: linear-gradient(135deg, #8FBC8F, #7CB87C);">
+                <i class="bi bi-file-text"></i>
               </div>
-              <span class="item-title">{{ isDarkMode ? '切换浅色模式' : '切换深色模式' }}</span>
+              <span class="item-title">我的帖子</span>
+              <span class="item-badge">{{ stats.posts || 0 }}</span>
+              <i class="bi bi-chevron-right item-arrow"></i>
             </div>
-            <div class="item-right">
+            <div class="menu-item" @click="goToMyComments">
+              <div class="item-icon" style="background: linear-gradient(135deg, #87CEEB, #5F9EA0);">
+                <i class="bi bi-chat-dots"></i>
+              </div>
+              <span class="item-title">我的评论</span>
+              <i class="bi bi-chevron-right item-arrow"></i>
+            </div>
+            <div class="menu-item" @click="goToMyCollections">
+              <div class="item-icon" style="background: linear-gradient(135deg, #DDA0DD, #DA70D6);">
+                <i class="bi bi-bookmark-star"></i>
+              </div>
+              <span class="item-title">我的收藏</span>
+              <i class="bi bi-chevron-right item-arrow"></i>
+            </div>
+            <div class="menu-item" @click="goToHistory">
+              <div class="item-icon" style="background: linear-gradient(135deg, #F0E68C, #BDB76B);">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <span class="item-title">浏览历史</span>
+              <i class="bi bi-chevron-right item-arrow"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 设置 -->
+        <div class="menu-group">
+          <div class="group-title">
+            <i class="bi bi-gear-fill"></i>
+            <span>设置</span>
+          </div>
+          <div class="menu-list">
+            <div class="menu-item" @click="toggleTheme">
+              <div class="item-icon" :style="{ background: isDarkMode ? 'linear-gradient(135deg, #FFD700, #FFA500)' : 'linear-gradient(135deg, #8FBC8F, #7CB87C)' }">
+                <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill'"></i>
+              </div>
+              <span class="item-title">{{ isDarkMode ? '切换日间模式' : '切换夜间模式' }}</span>
               <div class="toggle-switch" :class="{ active: isDarkMode }">
                 <div class="toggle-thumb"></div>
               </div>
             </div>
-          </div>
-
-          <div class="settings-item" @click="goToSettings">
-            <div class="item-left">
-              <div class="item-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="menu-item" @click="goToSettings">
+              <div class="item-icon" style="background: linear-gradient(135deg, #FFB6C1, #FF69B4);">
                 <i class="bi bi-sliders"></i>
               </div>
               <span class="item-title">账号设置</span>
+              <i class="bi bi-chevron-right item-arrow"></i>
             </div>
-            <div class="item-right">
-              <i class="bi bi-chevron-right"></i>
-            </div>
-          </div>
-
-          <div class="settings-item" @click="goToAbout">
-            <div class="item-left">
-              <div class="item-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+            <div class="menu-item" @click="goToAbout">
+              <div class="item-icon" style="background: linear-gradient(135deg, #98D8C8, #7FCDCD);">
                 <i class="bi bi-info-circle-fill"></i>
               </div>
               <span class="item-title">关于我们</span>
-            </div>
-            <div class="item-right">
               <span class="version">v1.0.0</span>
-              <i class="bi bi-chevron-right"></i>
+              <i class="bi bi-chevron-right item-arrow"></i>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 登录/退出按钮 -->
-    <div class="action-section">
-      <button v-if="!isLoggedIn" class="btn-primary" @click="goToLogin">
-        <div class="btn-glow"></div>
-        <i class="bi bi-box-arrow-in-right"></i>
-        <span>登录 / 注册</span>
-      </button>
-      <button v-else class="btn-logout" @click="logout">
-        <div class="btn-glow"></div>
-        <i class="bi bi-box-arrow-right"></i>
-        <span>退出登录</span>
-      </button>
-    </div>
+      <!-- 登录/退出按钮 -->
+      <div class="action-section">
+        <button v-if="!isLoggedIn" class="btn-login" @click="goToLogin">
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>登录 / 注册</span>
+        </button>
+        <button v-else class="btn-logout" @click="logout">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>退出登录</span>
+        </button>
+      </div>
+    </main>
 
-    <!-- 页脚 -->
-    <footer class="page-footer">
-      <p>&copy; 2024 择明论坛. All rights reserved.</p>
-    </footer>
-
-    <BottomNav active="profile" />
+    <!-- 底部导航 -->
+    <ManorBottomNav :isDarkMode="isDarkMode" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { get, post, clearTokens, getAccessToken } from '@/utils/request'
-import BottomNav from '@/components/BottomNav.vue'
+import { get, post, upload, clearTokens, getAccessToken } from '@/utils/request'
+import ManorBackground from '@/components/ManorBackground.vue'
+import ManorBottomNav from '@/components/ManorBottomNav.vue'
 
 const router = useRouter()
 
@@ -245,7 +218,10 @@ const stats = ref({
   following: 0,
   followers: 0
 })
-const particlesRef = ref(null)
+const editingUsername = ref(false)
+const newUsername = ref('')
+const usernameInput = ref(null)
+const avatarInput = ref(null)
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
 
@@ -320,16 +296,6 @@ function goToHistory() {
   router.push('/history')
 }
 
-function goToFollowing() {
-  if (!checkLogin()) return
-  router.push(`/follows/${user.value.id}/following`)
-}
-
-function goToFollowers() {
-  if (!checkLogin()) return
-  router.push(`/follows/${user.value.id}/followers`)
-}
-
 function goToSettings() {
   if (!checkLogin()) return
   router.push('/settings')
@@ -362,317 +328,404 @@ async function logout() {
   router.push('/')
 }
 
-// 生成粒子
-function generateParticles() {
-  if (!particlesRef.value) return
-  particlesRef.value.innerHTML = ''
-  for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div')
-    particle.className = 'particle'
-    particle.style.left = Math.random() * 100 + '%'
-    particle.style.top = Math.random() * 100 + '%'
-    particle.style.width = Math.random() * 4 + 2 + 'px'
-    particle.style.height = particle.style.width
-    particle.style.animationDelay = Math.random() * 5 + 's'
-    particle.style.animationDuration = Math.random() * 5 + 5 + 's'
-    particlesRef.value.appendChild(particle)
+// 用户名编辑功能
+function startEditUsername() {
+  newUsername.value = user.value.username || ''
+  editingUsername.value = true
+  nextTick(() => {
+    usernameInput.value?.focus()
+  })
+}
+
+function cancelEditUsername() {
+  editingUsername.value = false
+  newUsername.value = ''
+}
+
+async function saveUsername() {
+  const username = newUsername.value.trim()
+  if (!username) {
+    alert('用户名不能为空')
+    return
   }
+  if (username.length < 2 || username.length > 20) {
+    alert('用户名长度必须在2-20个字符之间')
+    return
+  }
+  if (username === user.value.username) {
+    editingUsername.value = false
+    return
+  }
+
+  try {
+    const res = await post('/users/username', { username })
+    if (res.code === 200) {
+      user.value.username = res.data.username
+      editingUsername.value = false
+      // 更新本地存储的用户信息
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      userInfo.username = res.data.username
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+    } else {
+      alert(res.message || '修改用户名失败')
+    }
+  } catch (error) {
+    console.error('修改用户名失败', error)
+    alert('修改用户名失败，请稍后重试')
+  }
+}
+
+// 头像上传功能
+function triggerAvatarUpload() {
+  avatarInput.value?.click()
+}
+
+async function handleAvatarChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    alert('请上传图片文件')
+    return
+  }
+
+  // 检查文件大小（最大2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('图片大小不能超过2MB')
+    return
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await upload('/users/avatar', formData)
+    if (res.code === 200) {
+      user.value.avatar = res.data.avatar
+      // 更新本地存储的用户信息
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      userInfo.avatar = res.data.avatar
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+    } else {
+      alert(res.message || '上传头像失败')
+    }
+  } catch (error) {
+    console.error('上传头像失败', error)
+    alert('上传头像失败，请稍后重试')
+  }
+
+  // 清空input，允许重复选择同一文件
+  event.target.value = ''
 }
 
 onMounted(() => {
   isDarkMode.value = localStorage.getItem('darkMode') === 'true'
-  generateParticles()
   loadUserInfo()
 })
 </script>
 
 <style scoped>
-.profile-page {
+.manor-profile {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
   position: relative;
-  overflow-x: hidden;
   padding-bottom: 100px;
 }
 
-/* 动态背景 */
-.animated-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: float 20s infinite ease-in-out;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -150px;
-  right: -150px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: -100px;
-  left: -100px;
-  animation-delay: -5s;
-}
-
-.orb-3 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 30%;
-  left: 20%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.1);
-  }
-  50% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
-  75% {
-    transform: translate(20px, 10px) scale(1.05);
-  }
-}
-
-/* 粒子效果 */
-.particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.particle {
-  position: absolute;
-  background: rgba(102, 126, 234, 0.3);
-  border-radius: 50%;
-  animation: particle-float 10s infinite ease-in-out;
-}
-
-@keyframes particle-float {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(50px);
-    opacity: 0;
-  }
-}
-
 /* 顶部导航 */
-.top-nav {
-  position: sticky;
+.profile-top-nav {
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 115, 85, 0.15);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  justify-content: space-between;
+  padding: 0 20px;
   z-index: 100;
+}
+
+.night-mode .profile-top-nav {
+  background: rgba(30, 35, 45, 0.9);
+  border-bottom-color: rgba(100, 110, 130, 0.2);
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.brand-icon {
-  width: 42px;
-  height: 42px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.4rem;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.brand-text {
-  font-size: 1.2rem;
+  gap: 10px;
+  font-size: 20px;
   font-weight: 700;
-  color: #333;
+  color: #5a7c5a;
+  font-family: 'Georgia', serif;
 }
 
-.btn-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+.night-mode .nav-brand {
+  color: #8ab88a;
+}
+
+.nav-brand i {
+  font-size: 24px;
+  color: #8FBC8F;
+}
+
+.night-mode .nav-brand i {
+  color: #7ac87a;
+}
+
+.theme-btn {
+  width: 40px;
+  height: 40px;
   border: none;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50%;
+  background: rgba(139, 115, 85, 0.1);
+  color: #8B7355;
+  font-size: 18px;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-icon:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  transform: translateY(-2px);
+.night-mode .theme-btn {
+  background: rgba(200, 180, 150, 0.1);
+  color: #D4C596;
 }
 
-/* 用户卡片区域 */
-.user-card-section {
+.theme-btn:hover {
+  background: rgba(139, 115, 85, 0.2);
+  transform: rotate(15deg);
+}
+
+/* 主内容 */
+.profile-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 90px 20px 40px;
   position: relative;
-  z-index: 10;
-  padding: 20px;
+  z-index: 1;
 }
 
-.user-card {
-  position: relative;
+/* 用户卡片 */
+.user-profile-card {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
+  margin-bottom: 24px;
 }
 
-.card-bg {
-  position: relative;
-  height: 120px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  overflow: hidden;
+.night-mode .user-profile-card {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
-.bg-pattern {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+.card-header-bg {
+  height: 100px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
 }
 
-.bg-glow {
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-.card-content {
+.card-body {
   padding: 0 24px 24px;
 }
 
-/* 用户头部信息 */
 .user-header {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  margin-top: -50px;
+  margin-top: -40px;
   margin-bottom: 20px;
 }
 
 .avatar-wrapper {
   position: relative;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .user-avatar {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   border: 4px solid white;
   object-fit: cover;
   background: #f0f2f5;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.avatar-ring {
+.night-mode .user-avatar {
+  border-color: #2d3748;
+}
+
+.avatar-upload-overlay {
   position: absolute;
-  top: -6px;
-  left: -6px;
-  right: -6px;
-  bottom: -6px;
-  border: 2px solid transparent;
-  border-top-color: #667eea;
-  border-right-color: #764ba2;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  animation: rotate 3s linear infinite;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border: 4px solid transparent;
 }
 
-@keyframes rotate {
-  to { transform: rotate(360deg); }
+.avatar-wrapper:hover .avatar-upload-overlay {
+  opacity: 1;
 }
 
-.online-status {
+.avatar-upload-overlay i {
+  color: white;
+  font-size: 24px;
+}
+
+.avatar-badge {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  background: #4ade80;
-  border: 3px solid white;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: #8FBC8F;
+  border: 2px solid white;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+}
+
+.night-mode .avatar-badge {
+  border-color: #2d3748;
 }
 
 .user-info {
   flex: 1;
-  padding-top: 55px;
+  padding-top: 45px;
   min-width: 0;
 }
 
-.username {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #333;
+.username-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
+.username {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d3748;
+  font-family: 'Georgia', serif;
+}
+
+.night-mode .username {
+  color: #e2e8f0;
+}
+
+.username-input {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  font-family: 'Georgia', serif;
+  border: 2px solid #8FBC8F;
+  border-radius: 8px;
+  padding: 4px 10px;
+  background: white;
+  outline: none;
+  width: 150px;
+}
+
+.night-mode .username-input {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #4a7c4a;
+}
+
+.edit-name-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(139, 188, 143, 0.2);
+  color: #5a7c5a;
+  border-radius: 50%;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.night-mode .edit-name-btn {
+  background: rgba(74, 124, 90, 0.3);
+  color: #8ab88a;
+}
+
+.edit-name-btn:hover {
+  background: #8FBC8F;
+  color: white;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.save-btn,
+.cancel-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.save-btn {
+  background: #8FBC8F;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #7CB87C;
+}
+
+.cancel-btn {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 107, 107, 0.3);
+}
+
 .user-id {
-  font-size: 0.8rem;
-  color: #999;
+  font-size: 12px;
+  color: #8a9a8a;
   margin-bottom: 6px;
 }
 
+.night-mode .user-id {
+  color: #7a9a8a;
+}
+
 .user-bio {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 14px;
+  color: #6a7c6a;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -680,333 +733,290 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.btn-edit {
+.night-mode .user-bio {
+  color: #9ab89a;
+}
+
+.edit-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  margin-top: 55px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-top: 45px;
   border: none;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  background: rgba(139, 188, 143, 0.15);
+  color: #5a7c5a;
+  border-radius: 50%;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.btn-edit:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.night-mode .edit-btn {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
 }
 
-/* 等级徽章 */
-.level-badge {
+.edit-btn:hover {
+  background: #8FBC8F;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 等级条 */
+.level-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: 25px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(139, 188, 143, 0.1);
+  border-radius: 16px;
   margin-bottom: 20px;
 }
 
-.level-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
+.night-mode .level-bar {
+  background: rgba(74, 124, 90, 0.15);
+}
+
+.level-info {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.9rem;
-}
-
-.level-text {
+  gap: 6px;
   font-weight: 600;
-  color: #667eea;
+  color: #5a7c5a;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
-.level-progress {
+.night-mode .level-info {
+  color: #8ab88a;
+}
+
+.level-info i {
+  color: #FFD700;
+}
+
+.progress-track {
   flex: 1;
   height: 6px;
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(139, 188, 143, 0.2);
   border-radius: 3px;
   overflow: hidden;
 }
 
-.progress-bar {
+.night-mode .progress-track {
+  background: rgba(74, 124, 90, 0.2);
+}
+
+.progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #8FBC8F, #7CB87C);
   border-radius: 3px;
   transition: width 0.5s ease;
 }
 
 /* 统计数据 */
-.user-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 16px;
-  background: rgba(248, 249, 250, 0.8);
-  border-radius: 16px;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
 }
 
-.stat-item {
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 8px;
+  background: rgba(139, 188, 143, 0.08);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.night-mode .stat-box {
+  background: rgba(74, 124, 90, 0.1);
+}
+
+.stat-box:hover {
+  transform: translateY(-2px);
+  background: rgba(139, 188, 143, 0.15);
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: #5a7c5a;
+}
+
+.night-mode .stat-num {
+  color: #8ab88a;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8a9a8a;
+}
+
+.night-mode .stat-label {
+  color: #7a9a8a;
+}
+
+/* 菜单区域 */
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.menu-group {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
+}
+
+.night-mode .menu-group {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+  font-family: 'Georgia', serif;
+}
+
+.night-mode .group-title {
+  color: #e2e8f0;
+}
+
+.group-title i {
+  color: #8FBC8F;
+}
+
+.night-mode .group-title i {
+  color: #7ac87a;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 14px;
+  background: rgba(139, 188, 143, 0.06);
+  border-radius: 16px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.stat-item:hover {
-  transform: translateY(-2px);
+.night-mode .menu-item {
+  background: rgba(74, 124, 90, 0.08);
 }
 
-.stat-icon {
+.menu-item:hover {
+  background: rgba(139, 188, 143, 0.12);
+  transform: translateX(4px);
+}
+
+.night-mode .menu-item:hover {
+  background: rgba(74, 124, 90, 0.15);
+}
+
+.item-icon {
   width: 40px;
   height: 40px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-}
-
-.stat-icon.posts {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.stat-icon.likes {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
-}
-
-.stat-icon.following {
-  background: rgba(79, 172, 254, 0.1);
-  color: #4facfe;
-}
-
-.stat-icon.followers {
-  background: rgba(67, 233, 123, 0.1);
-  color: #43e97b;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #333;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: #999;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 40px;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-/* 菜单区域 */
-.menu-section {
-  position: relative;
-  z-index: 10;
-  padding: 0 20px 20px;
-}
-
-.menu-group {
-  margin-bottom: 24px;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.group-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: white;
-  font-size: 1rem;
-}
-
-.group-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #333;
-}
-
-/* 菜单网格 */
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.menu-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 20px 16px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-}
-
-.menu-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.card-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.menu-card:hover .card-glow {
-  opacity: 1;
-}
-
-.menu-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.4rem;
-}
-
-.menu-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.menu-desc {
-  font-size: 0.8rem;
-  color: #999;
-}
-
-/* 设置列表 */
-.settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.settings-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-}
-
-.settings-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-}
-
-.item-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.item-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .item-title {
-  font-size: 1rem;
+  flex: 1;
+  font-size: 15px;
   font-weight: 500;
-  color: #333;
+  color: #2d3748;
 }
 
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.night-mode .item-title {
+  color: #e2e8f0;
+}
+
+.item-badge {
+  padding: 4px 10px;
+  background: rgba(139, 188, 143, 0.2);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5a7c5a;
+}
+
+.night-mode .item-badge {
+  background: rgba(74, 124, 90, 0.25);
+  color: #8ab88a;
+}
+
+.item-arrow {
+  color: #8a9a8a;
+  font-size: 14px;
+}
+
+.night-mode .item-arrow {
+  color: #7a9a8a;
 }
 
 .version {
-  font-size: 0.85rem;
-  color: #999;
+  font-size: 12px;
+  color: #8a9a8a;
 }
 
-.item-right > i {
-  color: #ccc;
-  transition: all 0.3s ease;
-}
-
-.settings-item:hover .item-right > i {
-  color: #667eea;
-  transform: translateX(4px);
+.night-mode .version {
+  color: #7a9a8a;
 }
 
 /* 切换开关 */
 .toggle-switch {
-  width: 50px;
-  height: 28px;
-  background: #e0e0e0;
-  border-radius: 14px;
+  width: 44px;
+  height: 24px;
+  background: rgba(139, 188, 143, 0.3);
+  border-radius: 12px;
   position: relative;
   cursor: pointer;
   transition: background 0.3s ease;
 }
 
+.night-mode .toggle-switch {
+  background: rgba(74, 124, 90, 0.3);
+}
+
 .toggle-switch.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #8FBC8F;
 }
 
 .toggle-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   background: white;
   border-radius: 50%;
   transition: transform 0.3s ease;
@@ -1014,38 +1024,39 @@ onMounted(() => {
 }
 
 .toggle-switch.active .toggle-thumb {
-  transform: translateX(22px);
+  transform: translateX(20px);
 }
 
-/* 操作按钮区域 */
+/* 操作按钮 */
 .action-section {
-  position: relative;
-  z-index: 10;
-  padding: 0 20px 20px;
+  display: flex;
+  justify-content: center;
 }
 
-.btn-primary,
+.btn-login,
 .btn-logout {
-  position: relative;
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 16px;
+  padding: 16px 48px;
   border: none;
   border-radius: 16px;
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.btn-login {
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(124, 184, 124, 0.3);
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 184, 124, 0.4);
 }
 
 .btn-logout {
@@ -1054,162 +1065,15 @@ onMounted(() => {
   border: 2px solid rgba(255, 107, 107, 0.3);
 }
 
-.btn-primary:hover,
 .btn-logout:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.btn-glow {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 60%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.btn-primary:hover .btn-glow,
-.btn-logout:hover .btn-glow {
-  opacity: 1;
-}
-
-/* 页脚 */
-.page-footer {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  padding: 20px;
-  color: #999;
-  font-size: 0.85rem;
-}
-
-/* 深色模式 */
-.dark-mode {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
-}
-
-.dark-mode .top-nav {
-  background: rgba(30, 30, 46, 0.9);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode .brand-text {
-  color: #fff;
-}
-
-.dark-mode .btn-icon {
-  background: rgba(167, 139, 250, 0.2);
-  color: #a78bfa;
-}
-
-.dark-mode .user-card {
-  background: rgba(30, 30, 46, 0.95);
-}
-
-.dark-mode .user-avatar {
-  border-color: #1e1e2e;
-}
-
-.dark-mode .username {
-  color: #fff;
-}
-
-.dark-mode .user-bio {
-  color: #aaa;
-}
-
-.dark-mode .btn-edit {
-  background: rgba(167, 139, 250, 0.2);
-  color: #a78bfa;
-}
-
-.dark-mode .btn-edit:hover {
-  background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
-  color: white;
-}
-
-.dark-mode .level-badge {
-  background: rgba(167, 139, 250, 0.1);
-}
-
-.dark-mode .level-text {
-  color: #a78bfa;
-}
-
-.dark-mode .user-stats {
-  background: rgba(45, 45, 68, 0.8);
-}
-
-.dark-mode .stat-value {
-  color: #fff;
-}
-
-.dark-mode .stat-label {
-  color: #666;
-}
-
-.dark-mode .stat-divider {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode .group-title {
-  color: #fff;
-}
-
-.dark-mode .menu-card,
-.dark-mode .settings-item {
-  background: rgba(30, 30, 46, 0.95);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode .menu-title,
-.dark-mode .item-title {
-  color: #fff;
-}
-
-.dark-mode .menu-desc {
-  color: #666;
-}
-
-.dark-mode .item-right > i {
-  color: #666;
-}
-
-.dark-mode .settings-item:hover .item-right > i {
-  color: #a78bfa;
-}
-
-.dark-mode .version {
-  color: #666;
-}
-
-.dark-mode .toggle-switch {
-  background: #2d2d44;
-}
-
-.dark-mode .btn-logout {
   background: rgba(255, 107, 107, 0.2);
-  border-color: rgba(255, 107, 107, 0.5);
-}
-
-.dark-mode .page-footer {
-  color: #666;
+  transform: translateY(-2px);
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .user-card-section,
-  .menu-section,
-  .action-section {
-    padding-left: 16px;
-    padding-right: 16px;
+@media (max-width: 640px) {
+  .profile-content {
+    padding: 80px 16px 40px;
   }
 
   .user-header {
@@ -1217,41 +1081,25 @@ onMounted(() => {
   }
 
   .user-avatar {
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
   }
 
   .user-info {
-    padding-top: 40px;
+    padding-top: 35px;
   }
 
-  .btn-edit {
-    margin-top: 10px;
-    margin-left: auto;
+  .edit-btn {
+    margin-top: 35px;
   }
 
-  .user-stats {
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  .stat-divider {
-    display: none;
-  }
-
-  .menu-grid {
+  .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
 
-  .menu-card {
-    padding: 16px 12px;
-  }
-
-  .menu-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
+  .menu-group {
+    padding: 16px;
   }
 }
 </style>

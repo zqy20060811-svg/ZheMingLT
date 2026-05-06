@@ -1,154 +1,120 @@
 <template>
-  <div class="category-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- 动态背景 -->
-    <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
-
-    <!-- 粒子效果 -->
-    <div class="particles" ref="particlesRef"></div>
+  <div class="manor-category" :class="{ 'night-mode': isDarkMode }">
+    <!-- 庄园背景 -->
+    <ManorBackground :isDarkMode="isDarkMode" />
 
     <!-- 顶部导航 -->
-    <nav class="top-nav">
-      <div class="nav-brand">
-        <div class="brand-icon">
-          <i class="bi bi-grid-3x3-gap-fill"></i>
-        </div>
-        <div class="brand-text">
-          <span class="brand-title">分类浏览</span>
-          <span class="brand-subtitle">探索不同话题</span>
-        </div>
-      </div>
-      <button class="btn-icon theme-btn" @click="toggleTheme">
-        <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
-      </button>
-    </nav>
-
-    <!-- 搜索栏 -->
-    <div class="search-section">
-      <div class="search-box">
-        <i class="bi bi-search"></i>
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="搜索感兴趣的分类..."
-          class="search-input"
-        />
-        <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
-          <i class="bi bi-x-circle-fill"></i>
+    <ManorNav title="分类花园" :isDarkMode="isDarkMode" @toggle-theme="toggleTheme">
+      <template #left>
+        <button class="nav-btn" @click="goBack">
+          <i class="bi bi-arrow-left"></i>
         </button>
-      </div>
-    </div>
+      </template>
+    </ManorNav>
 
-    <!-- 热门分类网格 -->
-    <div class="section-container">
-      <div class="section-header">
-        <div class="header-title">
-          <i class="bi bi-fire"></i>
-          <span>热门分类</span>
+    <!-- 主内容 -->
+    <main class="content-wrapper">
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <div class="header-icon">
+          <i class="bi bi-grid-fill"></i>
         </div>
-        <span class="header-count">{{ categories.length }} 个分类</span>
-      </div>
-      <div class="category-grid">
-        <div
-          v-for="(cat, index) in filteredCategories.slice(0, 6)"
-          :key="cat.id"
-          class="category-card"
-          :style="{ animationDelay: `${index * 0.1}s` }"
-          @click="goToCategoryDetail(cat.id)"
-        >
-          <div class="card-glow"></div>
-          <div class="card-icon" :style="{ background: cat.gradient }">
-            <i :class="cat.icon"></i>
-          </div>
-          <div class="card-content">
-            <h4 class="card-title">{{ cat.name }}</h4>
-            <p class="card-count">{{ cat.postCount || 0 }} 帖子</p>
-          </div>
-          <div class="card-arrow">
-            <i class="bi bi-arrow-right"></i>
-          </div>
+        <div class="header-text">
+          <h1>分类花园</h1>
+          <p>在花园中探索不同的话题分类</p>
         </div>
       </div>
-    </div>
 
-    <!-- 推荐分类 -->
-    <div class="section-container">
-      <div class="section-header">
-        <div class="header-title">
-          <i class="bi bi-stars"></i>
-          <span>推荐关注</span>
+      <!-- 搜索栏 -->
+      <div class="search-section">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索分类..."
+            class="search-input"
+            @input="searchCategories"
+          />
+          <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
+            <i class="bi bi-x-circle-fill"></i>
+          </button>
         </div>
       </div>
-      <div class="recommend-scroll">
-        <div
-          v-for="cat in filteredCategories.slice(0, 8)"
-          :key="`rec-${cat.id}`"
-          class="recommend-card"
-          @click="goToCategoryDetail(cat.id)"
-        >
-          <div class="rec-icon" :style="{ background: cat.gradient }">
-            <i :class="cat.icon"></i>
-          </div>
-          <span class="rec-name">{{ cat.name }}</span>
-          <span class="rec-count">{{ cat.postCount || 0 }} 帖</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- 全部分类列表 -->
-    <div class="section-container list-section">
-      <div class="section-header">
-        <div class="header-title">
-          <i class="bi bi-list-ul"></i>
-          <span>全部分类</span>
+      <!-- 分类统计 -->
+      <div class="stats-section">
+        <div class="stats-card">
+          <div class="stat-icon">
+            <i class="bi bi-folder-fill"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ filteredCategories.length }}</span>
+            <span class="stat-label">分类数量</span>
+          </div>
         </div>
       </div>
-      <div class="category-list">
-        <div
-          v-for="(cat, index) in filteredCategories"
-          :key="`list-${cat.id}`"
-          class="list-item"
-          :style="{ animationDelay: `${index * 0.05}s` }"
-          @click="goToCategoryDetail(cat.id)"
-        >
-          <div class="item-glow"></div>
-          <div class="item-left">
-            <div class="item-icon" :style="{ background: cat.gradient }">
-              <i :class="cat.icon"></i>
-            </div>
-            <div class="item-info">
-              <span class="item-title">{{ cat.name }}</span>
-              <span class="item-desc">{{ cat.description || '探索更多精彩内容' }}</span>
+
+      <!-- 分类列表 -->
+      <div class="categories-section">
+        <!-- 加载中 -->
+        <div v-if="loading" class="loading-state">
+          <div class="manor-spinner">
+            <div class="spinner-leaf leaf-1"></div>
+            <div class="spinner-leaf leaf-2"></div>
+            <div class="spinner-leaf leaf-3"></div>
+          </div>
+          <p>加载中...</p>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else-if="filteredCategories.length === 0" class="empty-state">
+          <div class="empty-illustration">
+            <i class="bi bi-folder"></i>
+            <div class="empty-decoration">
+              <span class="leaf leaf-1">🍃</span>
+              <span class="leaf leaf-2">🌿</span>
             </div>
           </div>
-          <div class="item-right">
-            <div class="item-stats">
-              <span class="stat">
-                <i class="bi bi-file-text"></i>
-                {{ cat.postCount || 0 }}
-              </span>
-            </div>
-            <div class="item-arrow">
-              <i class="bi bi-chevron-right"></i>
+          <h3>未找到相关分类</h3>
+          <p>试试其他关键词</p>
+        </div>
+
+        <!-- 分类网格 -->
+        <div v-else class="categories-grid">
+          <div
+            v-for="(cat, index) in filteredCategories"
+            :key="cat.id"
+            class="category-card"
+            :style="{ animationDelay: `${index * 0.05}s` }"
+            @click="goToCategoryDetail(cat.id)"
+          >
+            <div class="card-glow"></div>
+            <div class="card-inner">
+              <div class="card-icon" :style="{ background: getGradient(cat.id) }">
+                <i :class="cat.icon || 'bi bi-folder'"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="category-name">{{ cat.name }}</h3>
+                <p class="category-desc">{{ cat.description || '探索更多精彩内容' }}</p>
+                <div class="category-stats">
+                  <span class="stat-item">
+                    <i class="bi bi-file-text"></i>
+                    {{ cat.postCount || 0 }} 帖子
+                  </span>
+                </div>
+              </div>
+              <div class="card-arrow">
+                <i class="bi bi-chevron-right"></i>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <!-- 空状态 -->
-    <div v-if="filteredCategories.length === 0" class="empty-state">
-      <div class="empty-icon">
-        <i class="bi bi-search"></i>
-      </div>
-      <h4>未找到相关分类</h4>
-      <p>试试其他关键词</p>
-    </div>
-
-    <BottomNav active="category" />
+    <!-- 底部导航 -->
+    <ManorBottomNav :isDarkMode="isDarkMode" active="category" />
   </div>
 </template>
 
@@ -156,27 +122,38 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { get } from '@/utils/request'
-import BottomNav from '@/components/BottomNav.vue'
+import ManorBackground from '@/components/ManorBackground.vue'
+import ManorNav from '@/components/ManorNav.vue'
+import ManorBottomNav from '@/components/ManorBottomNav.vue'
 
 const router = useRouter()
-
-const isDarkMode = ref(false)
+const isDarkMode = ref(localStorage.getItem('darkMode') === 'true')
+const loading = ref(false)
 const searchQuery = ref('')
 const categories = ref([])
-const particlesRef = ref(null)
 
-const defaultCategories = [
-  { id: 1, name: '技术交流', icon: 'bi bi-code-slash', color: '#4a6fa5', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: '分享技术心得，探讨前沿技术' },
-  { id: 2, name: '生活分享', icon: 'bi bi-cup-hot', color: '#e07a5f', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: '记录生活点滴，分享美好时光' },
-  { id: 3, name: '娱乐八卦', icon: 'bi bi-film', color: '#81b29a', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: '影视音乐游戏，娱乐资讯分享' },
-  { id: 4, name: '学习资料', icon: 'bi bi-book', color: '#f2cc8f', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', description: '学习资源分享，知识交流讨论' },
-  { id: 5, name: '职场经验', icon: 'bi bi-briefcase', color: '#9b5de5', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: '职场技能提升，工作经验分享' },
-  { id: 6, name: '兴趣爱好', icon: 'bi bi-palette', color: '#00bbf9', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', description: '兴趣交流，爱好分享' },
-  { id: 7, name: '问答求助', icon: 'bi bi-question-circle', color: '#ff6b6b', gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', description: '有问题就问，大家来帮忙' },
-  { id: 8, name: '资源分享', icon: 'bi bi-folder', color: '#4ecdc4', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: '优质资源分享，互助互利' }
+const gradients = [
+  'linear-gradient(135deg, #8FBC8F, #7CB87C)',
+  'linear-gradient(135deg, #DEB887, #D2B48C)',
+  'linear-gradient(135deg, #BC8F8F, #CD853F)',
+  'linear-gradient(135deg, #9ACD32, #8FBC8F)',
+  'linear-gradient(135deg, #DDA0DD, #D8BFD8)',
+  'linear-gradient(135deg, #F0E68C, #BDB76B)',
+  'linear-gradient(135deg, #87CEEB, #5F9EA0)',
+  'linear-gradient(135deg, #FFA07A, #FA8072)'
 ]
 
-// 过滤后的分类
+const defaultCategories = [
+  { id: 1, name: '技术交流', icon: 'bi bi-code-slash', description: '分享技术心得，探讨前沿技术' },
+  { id: 2, name: '生活分享', icon: 'bi bi-cup-hot', description: '记录生活点滴，分享美好时光' },
+  { id: 3, name: '娱乐八卦', icon: 'bi bi-film', description: '影视音乐游戏，娱乐资讯分享' },
+  { id: 4, name: '学习资料', icon: 'bi bi-book', description: '学习资源分享，知识交流讨论' },
+  { id: 5, name: '职场经验', icon: 'bi bi-briefcase', description: '职场技能提升，工作经验分享' },
+  { id: 6, name: '兴趣爱好', icon: 'bi bi-palette', description: '兴趣交流，爱好分享' },
+  { id: 7, name: '问答求助', icon: 'bi bi-question-circle', description: '有问题就问，大家来帮忙' },
+  { id: 8, name: '资源分享', icon: 'bi bi-folder', description: '优质资源分享，互助互利' }
+]
+
 const filteredCategories = computed(() => {
   if (!searchQuery.value) return categories.value
   const query = searchQuery.value.toLowerCase()
@@ -186,25 +163,44 @@ const filteredCategories = computed(() => {
   )
 })
 
+function getGradient(id) {
+  return gradients[(id - 1) % gradients.length]
+}
+
 function toggleTheme() {
   isDarkMode.value = !isDarkMode.value
   localStorage.setItem('darkMode', isDarkMode.value)
 }
 
+function goBack() {
+  router.back()
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+}
+
+function searchCategories() {
+  // 搜索通过 computed 自动处理
+}
+
 async function loadCategories() {
+  loading.value = true
   try {
     const res = await get('/categories')
     if (res.code === 200 && res.data && res.data.length > 0) {
-      const loaded = res.data.map((cat, index) => ({
+      categories.value = res.data.map((cat, index) => ({
         ...cat,
-        ...defaultCategories[index % defaultCategories.length]
+        icon: defaultCategories[index % defaultCategories.length]?.icon || 'bi bi-folder'
       }))
-      categories.value = loaded
     } else {
       categories.value = defaultCategories
     }
   } catch (error) {
+    console.error('加载分类失败', error)
     categories.value = defaultCategories
+  } finally {
+    loading.value = false
   }
 }
 
@@ -212,319 +208,344 @@ function goToCategoryDetail(id) {
   router.push(`/category/${id}`)
 }
 
-// 生成粒子
-function generateParticles() {
-  if (!particlesRef.value) return
-  particlesRef.value.innerHTML = ''
-  for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div')
-    particle.className = 'particle'
-    particle.style.left = Math.random() * 100 + '%'
-    particle.style.top = Math.random() * 100 + '%'
-    particle.style.width = Math.random() * 4 + 2 + 'px'
-    particle.style.height = particle.style.width
-    particle.style.animationDelay = Math.random() * 5 + 's'
-    particle.style.animationDuration = Math.random() * 5 + 5 + 's'
-    particlesRef.value.appendChild(particle)
-  }
-}
-
 onMounted(() => {
-  isDarkMode.value = localStorage.getItem('darkMode') === 'true'
-  generateParticles()
   loadCategories()
 })
 </script>
 
 <style scoped>
-.category-page {
+.manor-category {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+  padding-top: 70px;
+  padding-bottom: 90px;
+}
+
+.content-wrapper {
   position: relative;
-  overflow-x: hidden;
-  padding-bottom: 80px;
-}
-
-/* 动态背景 */
-.animated-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: float 20s infinite ease-in-out;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -150px;
-  left: -150px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: -100px;
-  right: -100px;
-  animation-delay: -5s;
-}
-
-.orb-3 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 50%;
-  right: 20%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.1);
-  }
-  50% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
-  75% {
-    transform: translate(20px, 10px) scale(1.05);
-  }
-}
-
-/* 粒子效果 */
-.particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
   z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-.particle {
-  position: absolute;
-  background: rgba(102, 126, 234, 0.3);
-  border-radius: 50%;
-  animation: particle-float 10s infinite ease-in-out;
-}
-
-@keyframes particle-float {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(50px);
-    opacity: 0;
-  }
-}
-
-/* 顶部导航 */
-.top-nav {
-  position: sticky;
-  top: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
-  z-index: 100;
-}
-
-.nav-brand {
+/* 页面标题 */
+.page-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.brand-icon {
-  width: 45px;
-  height: 45px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+.header-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 28px;
   color: white;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(124, 184, 124, 0.3);
 }
 
-.brand-text {
-  display: flex;
-  flex-direction: column;
+.night-mode .header-icon {
+  background: linear-gradient(135deg, #4a7c5a, #3a6c4a);
+  box-shadow: 0 4px 15px rgba(60, 120, 80, 0.4);
 }
 
-.brand-title {
-  font-size: 1.2rem;
+.header-text h1 {
+  font-size: 24px;
   font-weight: 700;
-  color: #333;
-  line-height: 1.2;
+  color: #4a6a4a;
+  margin-bottom: 4px;
+  font-family: 'Georgia', serif;
 }
 
-.brand-subtitle {
-  font-size: 0.8rem;
-  color: #999;
+.night-mode .header-text h1 {
+  color: #8ab88a;
 }
 
-.btn-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.header-text p {
+  font-size: 14px;
+  color: #7a8a7a;
 }
 
-.btn-icon:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  transform: translateY(-2px);
+.night-mode .header-text p {
+  color: #9ab89a;
 }
 
 /* 搜索栏 */
 .search-section {
-  position: relative;
-  z-index: 10;
-  padding: 20px;
+  margin-bottom: 20px;
 }
 
 .search-box {
-  position: relative;
   display: flex;
   align-items: center;
-  background: white;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
-  padding: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(139, 188, 143, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
-.search-box:focus-within {
-  box-shadow: 0 4px 25px rgba(102, 126, 234, 0.2);
+.night-mode .search-box {
+  background: rgba(40, 45, 55, 0.9);
+  border-color: rgba(100, 140, 120, 0.2);
 }
 
-.search-box > i {
-  padding: 0 16px;
-  color: #999;
-  font-size: 1.1rem;
+.search-box i {
+  color: #8FBC8F;
+  font-size: 18px;
 }
 
 .search-input {
   flex: 1;
-  padding: 14px 0;
   border: none;
   background: transparent;
-  font-size: 1rem;
-  color: #333;
-}
-
-.search-input:focus {
+  font-size: 15px;
+  color: #4a6a4a;
   outline: none;
 }
 
+.night-mode .search-input {
+  color: #a8d8a8;
+}
+
 .search-input::placeholder {
-  color: #999;
+  color: #9a9a9a;
 }
 
 .clear-btn {
-  padding: 8px 16px;
+  background: none;
   border: none;
-  background: transparent;
-  color: #ccc;
+  color: #999;
   cursor: pointer;
-  transition: color 0.3s ease;
+  padding: 4px;
 }
 
 .clear-btn:hover {
-  color: #999;
+  color: #666;
 }
 
-/* 区块容器 */
-.section-container {
-  position: relative;
-  z-index: 10;
-  padding: 0 20px 24px;
+/* 统计卡片 */
+.stats-section {
+  margin-bottom: 24px;
 }
 
-.section-header {
+.stats-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 16px;
+  padding: 20px 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 188, 143, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.header-title {
+.night-mode .stats-card {
+  background: rgba(40, 45, 55, 0.9);
+  border-color: rgba(100, 140, 120, 0.2);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+
+.night-mode .stat-icon {
+  background: linear-gradient(135deg, #4a7c5a, #3a6c4a);
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 28px;
   font-weight: 700;
-  color: #333;
+  color: #4a6a4a;
 }
 
-.header-title i {
-  color: #667eea;
+.night-mode .stat-value {
+  color: #8ab88a;
 }
 
-.header-count {
-  font-size: 0.85rem;
-  color: #999;
+.stat-label {
+  font-size: 14px;
+  color: #7a8a7a;
+}
+
+.night-mode .stat-label {
+  color: #9ab89a;
+}
+
+/* 分类列表 */
+.categories-section {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.15);
+}
+
+.night-mode .categories-section {
+  background: rgba(40, 45, 55, 0.85);
+  border-color: rgba(100, 140, 120, 0.15);
+}
+
+/* 加载状态 */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.manor-spinner {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 16px;
+}
+
+.spinner-leaf {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  border-radius: 0 50% 50% 50%;
+  transform-origin: center;
+}
+
+.leaf-1 {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) rotate(0deg);
+  animation: spin-leaf 1s infinite ease-in-out;
+}
+
+.leaf-2 {
+  bottom: 10%;
+  left: 10%;
+  transform: rotate(120deg);
+  animation: spin-leaf 1s infinite ease-in-out 0.33s;
+}
+
+.leaf-3 {
+  bottom: 10%;
+  right: 10%;
+  transform: rotate(240deg);
+  animation: spin-leaf 1s infinite ease-in-out 0.66s;
+}
+
+@keyframes spin-leaf {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(var(--rotation, 0deg)); }
+  50% { opacity: 0.5; transform: scale(0.8) rotate(var(--rotation, 0deg)); }
+}
+
+.loading-state p {
+  color: #8a9a8a;
+  font-size: 14px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-illustration {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-illustration > i {
+  font-size: 60px;
+  color: #c8d8c8;
+}
+
+.night-mode .empty-illustration > i {
+  color: #4a5a5a;
+}
+
+.empty-decoration {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.empty-decoration .leaf {
+  position: absolute;
+  font-size: 20px;
+  opacity: 0.6;
+  animation: float-leaf 3s ease-in-out infinite;
+}
+
+.leaf-1 {
+  top: 0;
+  right: 0;
+  animation-delay: 0s;
+}
+
+.leaf-2 {
+  bottom: 10px;
+  left: 0;
+  animation-delay: 1.5s;
+}
+
+@keyframes float-leaf {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(10deg); }
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  color: #5a7c5a;
+  margin-bottom: 8px;
+}
+
+.night-mode .empty-state h3 {
+  color: #8ab88a;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: #8a9a8a;
 }
 
 /* 分类网格 */
-.category-grid {
+.categories-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
 .category-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
-  animation: slideIn 0.5s ease forwards;
+  border: 1px solid rgba(139, 188, 143, 0.1);
+  animation: slideIn 0.4s ease forwards;
   opacity: 0;
   transform: translateY(20px);
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 @keyframes slideIn {
@@ -534,9 +555,15 @@ onMounted(() => {
   }
 }
 
+.night-mode .category-card {
+  background: rgba(50, 55, 65, 0.7);
+  border-color: rgba(100, 140, 120, 0.1);
+}
+
 .category-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: rgba(143, 188, 143, 0.3);
 }
 
 .card-glow {
@@ -545,7 +572,8 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
+  background: linear-gradient(135deg, rgba(143, 188, 143, 0.1), transparent);
+  border-radius: 16px;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -554,15 +582,29 @@ onMounted(() => {
   opacity: 1;
 }
 
+.card-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+}
+
+.night-mode .card-inner {
+  background: rgba(40, 45, 55, 0.5);
+}
+
 .card-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 22px;
   color: white;
-  font-size: 1.6rem;
   flex-shrink: 0;
 }
 
@@ -571,379 +613,111 @@ onMounted(() => {
   min-width: 0;
 }
 
-.card-title {
-  font-size: 1rem;
+.category-name {
+  font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #3a5a3a;
   margin-bottom: 4px;
+  font-family: 'Georgia', serif;
 }
 
-.card-count {
-  font-size: 0.85rem;
-  color: #999;
+.night-mode .category-name {
+  color: #a8d8a8;
+}
+
+.category-desc {
+  font-size: 12px;
+  color: #7a8a7a;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.night-mode .category-desc {
+  color: #9ab89a;
+}
+
+.category-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #8a9a8a;
+}
+
+.stat-item i {
+  color: #8FBC8F;
 }
 
 .card-arrow {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(102, 126, 234, 0.1);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(139, 188, 143, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667eea;
+  color: #8FBC8F;
   transition: all 0.3s ease;
 }
 
 .category-card:hover .card-arrow {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
-  transform: translateX(4px);
 }
 
-/* 推荐滚动 */
-.recommend-scroll {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding: 4px 4px 12px;
-  scrollbar-width: none;
-}
-
-.recommend-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.recommend-card {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  min-width: 100px;
-}
-
-.recommend-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.rec-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.5rem;
-}
-
-.rec-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  white-space: nowrap;
-}
-
-.rec-count {
-  font-size: 0.8rem;
-  color: #999;
-}
-
-/* 分类列表 */
-.list-section {
-  padding-bottom: 20px;
-}
-
-.category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.list-item {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  animation: slideIn 0.5s ease forwards;
-  opacity: 0;
-  transform: translateX(-20px);
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.list-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.item-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.list-item:hover .item-glow {
-  opacity: 1;
-}
-
-.item-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.item-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.3rem;
-}
-
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.item-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.item-desc {
-  font-size: 0.85rem;
-  color: #999;
-}
-
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.item-stats {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 20px;
-  color: #667eea;
-  font-size: 0.85rem;
-}
-
-.item-arrow {
-  color: #ccc;
-  transition: all 0.3s ease;
-}
-
-.list-item:hover .item-arrow {
-  color: #667eea;
-  transform: translateX(4px);
-}
-
-/* 空状态 */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.empty-icon {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+/* 返回按钮 */
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
   border-radius: 50%;
+  background: rgba(139, 188, 143, 0.2);
+  color: #5a7c5a;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
 }
 
-.empty-icon i {
-  font-size: 3rem;
-  color: #667eea;
+.night-mode .nav-btn {
+  background: rgba(100, 140, 120, 0.2);
+  color: #8ab88a;
 }
 
-.empty-state h4 {
-  font-size: 1.2rem;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-.empty-state p {
-  font-size: 0.9rem;
-  color: #999;
-}
-
-/* 深色模式 */
-.dark-mode {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
-}
-
-.dark-mode .top-nav {
-  background: rgba(30, 30, 46, 0.9);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode .brand-title {
-  color: #fff;
-}
-
-.dark-mode .brand-subtitle {
-  color: #666;
-}
-
-.dark-mode .btn-icon {
-  background: rgba(102, 126, 234, 0.2);
-}
-
-.dark-mode .search-box {
-  background: rgba(30, 30, 46, 0.9);
-}
-
-.dark-mode .search-input {
-  color: #e0e0e0;
-}
-
-.dark-mode .search-input::placeholder {
-  color: #666;
-}
-
-.dark-mode .header-title {
-  color: #fff;
-}
-
-.dark-mode .header-count {
-  color: #666;
-}
-
-.dark-mode .category-card,
-.dark-mode .recommend-card,
-.dark-mode .list-item {
-  background: rgba(30, 30, 46, 0.95);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode .card-title,
-.dark-mode .rec-name,
-.dark-mode .item-title {
-  color: #fff;
-}
-
-.dark-mode .card-count,
-.dark-mode .rec-count,
-.dark-mode .item-desc {
-  color: #666;
-}
-
-.dark-mode .card-arrow {
-  background: rgba(167, 139, 250, 0.2);
-  color: #a78bfa;
-}
-
-.dark-mode .category-card:hover .card-arrow {
-  background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
-}
-
-.dark-mode .item-stats {
-  background: rgba(167, 139, 250, 0.2);
-  color: #a78bfa;
-}
-
-.dark-mode .item-arrow {
-  color: #666;
-}
-
-.dark-mode .list-item:hover .item-arrow {
-  color: #a78bfa;
-}
-
-.dark-mode .empty-icon {
-  background: rgba(167, 139, 250, 0.2);
-}
-
-.dark-mode .empty-icon i {
-  color: #a78bfa;
-}
-
-.dark-mode .empty-state h4 {
-  color: #fff;
+.nav-btn:hover {
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  color: white;
+  transform: scale(1.05);
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .brand-subtitle {
-    display: none;
-  }
-
-  .search-section,
-  .section-container {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .category-grid {
-    gap: 12px;
-  }
-
-  .category-card {
+@media (max-width: 640px) {
+  .content-wrapper {
     padding: 16px;
   }
 
-  .card-icon {
+  .page-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header-icon {
     width: 48px;
     height: 48px;
-    font-size: 1.3rem;
+    font-size: 24px;
   }
 
-  .card-title {
-    font-size: 0.95rem;
-  }
-
-  .list-item {
-    padding: 14px 16px;
-  }
-
-  .item-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
-  }
-
-  .item-desc {
-    display: none;
-  }
-
-  .item-stats {
-    display: none;
+  .categories-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,8 +1,11 @@
 package com.zheminglt.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zheminglt.constant.BusinessConstant;
 import com.zheminglt.constant.ErrorCodeConstant;
 import com.zheminglt.constant.MessageConstant;
+import com.zheminglt.constant.RedisKeyConstant;
 import com.zheminglt.dto.LoginDTO;
 import com.zheminglt.dto.UserDTO;
 import com.zheminglt.mapper.UserMapper;
@@ -19,6 +22,8 @@ import com.zheminglt.model.Comment;
 import com.zheminglt.model.Category;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.service.UserService;
+import com.zheminglt.utils.PasswordMigrationUtil;
+import com.zheminglt.utils.PasswordUtil;
 import com.zheminglt.vo.LoginVO;
 import com.zheminglt.vo.UserVO;
 import com.zheminglt.vo.UserStatsVO;
@@ -33,9 +38,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,6 +69,12 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private CategoryMapper categoryMapper;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public ResponseVO<UserVO> register(UserDTO userDTO) {
         // 检查用户名是否已存在
@@ -83,8 +96,19 @@ public class UserServiceImpl implements UserService {
             }
         }
 
+        // 检查密码长度
+        String password = userDTO.getPassword();
+        if (password == null || password.length() < 6) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, "密码长度不能少于6位");
+        }
+        if (password.length() > 32) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, "密码长度不能超过32位");
+        }
+
         User user = new User();
         BeanUtils.copyProperties(userDTO, user);
+        // 使用SHA-256加盐加密密码
+        user.setPassword(PasswordUtil.encryptPassword(userDTO.getPassword()));
         user.setRole(BusinessConstant.ROLE_USER);
         user.setStatus(BusinessConstant.STATUS_ENABLED);
         User savedUser = userMapper.save(user);
@@ -111,7 +135,34 @@ public class UserServiceImpl implements UserService {
         System.out.println("找到用户: " + user.getUsername());
 
         // 验证密码
-        if (!loginDTO.getPassword().equals(user.getPassword())) {
+        boolean passwordValid = false;
+        String storedPassword = user.getPassword();
+        System.out.println("存储的密码: " + storedPassword);
+        System.out.println("输入的密码: " + loginDTO.getPassword());
+
+        boolean isOldFormat = PasswordMigrationUtil.isOldPasswordFormat(storedPassword);
+        System.out.println("是否是旧格式: " + isOldFormat);
+
+        if (isOldFormat) {
+            // 旧格式：明文直接比较
+            passwordValid = loginDTO.getPassword().equals(storedPassword);
+            System.out.println("明文比较结果: " + passwordValid);
+            if (passwordValid) {
+                // 登录成功，自动迁移密码为新格式
+                System.out.println("检测到旧密码格式，自动迁移中...");
+                String newPassword = PasswordUtil.encryptPassword(loginDTO.getPassword());
+                System.out.println("新密码: " + newPassword);
+                user.setPassword(newPassword);
+                User savedUser = userMapper.save(user);
+                System.out.println("密码迁移完成，新存储的密码: " + savedUser.getPassword());
+            }
+        } else {
+            // 新格式：SHA-256加盐验证
+            passwordValid = PasswordUtil.verifyPassword(loginDTO.getPassword(), storedPassword);
+            System.out.println("SHA-256验证结果: " + passwordValid);
+        }
+
+        if (!passwordValid) {
             System.out.println("密码不匹配");
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
@@ -188,9 +239,6 @@ public class UserServiceImpl implements UserService {
         }
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(user, userVO);
-        // 不返回敏感信息
-        userVO.setEmail(null);
-        userVO.setPhone(null);
         return ResponseVO.success(userVO);
     }
 
@@ -200,7 +248,11 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
         }
+        // 保存原密码
+        String originalPassword = user.getPassword();
         BeanUtils.copyProperties(userDTO, user);
+        // 恢复密码，避免被覆盖
+        user.setPassword(originalPassword);
         User updatedUser = userMapper.save(user);
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(updatedUser, userVO);
@@ -340,6 +392,22 @@ public class UserServiceImpl implements UserService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
         }
 
+        // 构建缓存key
+        String cacheKey = RedisKeyConstant.USER_POSTS + userId + ":" + page + ":" + size;
+
+        try {
+            // 尝试从缓存获取
+            String cachedData = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedData != null) {
+                PageVO<PostVO> cachedPageVO = objectMapper.readValue(cachedData, new TypeReference<PageVO<PostVO>>() {});
+                return ResponseVO.success(cachedPageVO);
+            }
+        } catch (Exception e) {
+            // 缓存读取失败，继续查询数据库
+            System.err.println("Redis缓存读取失败: " + e.getMessage());
+        }
+
+        // 查询数据库
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<Post> postPage = postMapper.findByUserId(userId, pageable);
 
@@ -354,7 +422,56 @@ public class UserServiceImpl implements UserService {
         pageVO.setSize(size);
         pageVO.setPages(postPage.getTotalPages());
 
+        // 写入缓存
+        try {
+            String jsonData = objectMapper.writeValueAsString(pageVO);
+            redisTemplate.opsForValue().set(cacheKey, jsonData, RedisKeyConstant.USER_POSTS_EXPIRE, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            // 缓存写入失败，不影响返回结果
+            System.err.println("Redis缓存写入失败: " + e.getMessage());
+        }
+
         return ResponseVO.success(pageVO);
+    }
+
+    @Override
+    public ResponseVO<UserVO> updateAvatar(Long userId, String avatarUrl) {
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+        user.setAvatar(avatarUrl);
+        User updatedUser = userMapper.save(user);
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(updatedUser, userVO);
+        return ResponseVO.success(userVO);
+    }
+
+    @Override
+    public ResponseVO<UserVO> updateUsername(Long userId, String newUsername) {
+        if (newUsername == null || newUsername.trim().isEmpty()) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, "用户名不能为空");
+        }
+        if (newUsername.length() < 2 || newUsername.length() > 20) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, "用户名长度必须在2-20个字符之间");
+        }
+
+        // 检查新用户名是否已被使用
+        User existingUser = userMapper.findByUsername(newUsername);
+        if (existingUser != null && !existingUser.getId().equals(userId)) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_CONFLICT, "用户名已被使用");
+        }
+
+        User user = userMapper.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
+        }
+
+        user.setUsername(newUsername);
+        User updatedUser = userMapper.save(user);
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(updatedUser, userVO);
+        return ResponseVO.success(userVO);
     }
 
     // 辅助方法：将Post转换为PostVO
@@ -363,6 +480,7 @@ public class UserServiceImpl implements UserService {
         vo.setId(post.getId());
         vo.setTitle(post.getTitle());
         vo.setContent(post.getContent());
+        vo.setSummary(post.getSummary());
         vo.setViewCount(post.getViewCount());
         vo.setLikeCount(post.getLikeCount());
         vo.setCommentCount(post.getCommentCount());
@@ -370,12 +488,14 @@ public class UserServiceImpl implements UserService {
         vo.setCreatedAt(post.getCreatedAt());
         vo.setUpdatedAt(post.getUpdatedAt());
 
-        // 设置作者名称
+        // 设置作者信息
         if (post.getUser() != null) {
+            vo.setUserId(post.getUser().getId());
             vo.setAuthorName(post.getUser().getUsername());
+            vo.setAuthorAvatar(post.getUser().getAvatar());
         }
 
-        // 设置分类名称
+        // 设置分类信息
         if (post.getCategory() != null) {
             vo.setCategoryName(post.getCategory().getName());
         }

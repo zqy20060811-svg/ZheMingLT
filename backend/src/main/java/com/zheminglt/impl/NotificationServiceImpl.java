@@ -153,6 +153,32 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    public void createFollowNotification(Long fromUserId, Long toUserId) {
+        // 不给自己发通知
+        if (fromUserId.equals(toUserId)) {
+            return;
+        }
+
+        User fromUser = userMapper.findById(fromUserId).orElse(null);
+        User toUser = userMapper.findById(toUserId).orElse(null);
+
+        if (fromUser == null || toUser == null) {
+            return;
+        }
+
+        Notification notification = new Notification();
+        notification.setUser(toUser);
+        notification.setType("FOLLOW");
+        notification.setTitle("收到新关注");
+        notification.setContent(fromUser.getUsername() + " 关注了你");
+        notification.setFromUserId(fromUserId);
+        notification.setIsRead(false);
+
+        notificationMapper.save(notification);
+    }
+
+    @Override
+    @Transactional
     public void createSystemNotification(Long userId, String title, String content) {
         User user = userMapper.findById(userId).orElse(null);
         if (user == null) {

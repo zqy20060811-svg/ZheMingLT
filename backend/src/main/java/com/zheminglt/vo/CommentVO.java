@@ -7,10 +7,13 @@ import java.util.Date;
 public class CommentVO {
     private Long id;
     private Long postId;
-    private UserVO user;
     private Long parentId;
     private String content;
     private Integer status;
     private Date createdAt;
-    private String authorName;  // 作者名称
+    
+    // 作者信息
+    private Long authorId;
+    private String authorName;
+    private String authorAvatar;
 }

@@ -3,6 +3,7 @@ package com.zheminglt.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @Schema(description = "帖子信息VO")
@@ -18,6 +19,7 @@ public class PostVO {
     private Integer viewCount;
     private Integer likeCount;
     private Integer commentCount;
+    private Integer collectCount;
     private Date createdAt;
     private Date updatedAt;
     private Boolean isLiked;
@@ -37,4 +39,10 @@ public class PostVO {
 
     @Schema(description = "分类名称")
     private String categoryName;
+
+    @Schema(description = "是否已关注作者")
+    private Boolean isFollowing;
+
+    @Schema(description = "标签列表")
+    private List<TagVO> tags;
 }

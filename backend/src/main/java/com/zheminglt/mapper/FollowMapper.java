@@ -1,6 +1,7 @@
 package com.zheminglt.mapper;
 
 import com.zheminglt.model.Follow;
+import com.zheminglt.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,25 +14,19 @@ import java.util.Optional;
 @Repository
 public interface FollowMapper extends JpaRepository<Follow, Long> {
 
-    // 检查是否已关注
-    Optional<Follow> findByFollowerIdAndFollowingId(Long followerId, Long followingId);
+    Optional<Follow> findByFollowerAndFollowing(User follower, User following);
 
-    // 获取用户的关注列表
-    Page<Follow> findByFollowerIdOrderByCreatedAtDesc(Long followerId, Pageable pageable);
+    boolean existsByFollowerAndFollowing(User follower, User following);
 
-    // 获取用户的粉丝列表
-    Page<Follow> findByFollowingIdOrderByCreatedAtDesc(Long followingId, Pageable pageable);
+    @Query("SELECT f.following FROM Follow f WHERE f.follower.id = :followerId")
+    Page<User> findFollowingByFollowerId(@Param("followerId") Long followerId, Pageable pageable);
 
-    // 获取关注数量
+    @Query("SELECT f.follower FROM Follow f WHERE f.following.id = :followingId")
+    Page<User> findFollowersByFollowingId(@Param("followingId") Long followingId, Pageable pageable);
+
     long countByFollowerId(Long followerId);
 
-    // 获取粉丝数量
     long countByFollowingId(Long followingId);
 
-    // 检查是否互相关注
-    @Query("SELECT COUNT(f) > 0 FROM Follow f WHERE f.follower.id = :userId1 AND f.following.id = :userId2")
-    boolean existsByFollowerIdAndFollowingId(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
-
-    // 删除关注关系
-    void deleteByFollowerIdAndFollowingId(Long followerId, Long followingId);
+    void deleteByFollowerAndFollowing(User follower, User following);
 }

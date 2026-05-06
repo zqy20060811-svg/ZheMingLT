@@ -1,179 +1,206 @@
 <template>
-  <div class="post-detail-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- 动态背景 -->
-    <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
+  <div class="manor-post-detail" :class="{ 'night-mode': isDarkMode }">
+    <!-- 庄园背景 -->
+    <ManorBackground :isDarkMode="isDarkMode" />
 
     <!-- 顶部导航 -->
-    <nav class="top-nav">
+    <nav class="detail-top-nav">
       <div class="nav-left">
         <button class="back-btn" @click="goBack">
           <i class="bi bi-arrow-left"></i>
         </button>
-        <div class="nav-brand">
-          <div class="logo-wrapper">
-            <i class="bi bi-lightbulb-fill"></i>
-          </div>
-          <span class="brand-text">择明论坛</span>
+        <div class="nav-brand" @click="goHome">
+          <i class="bi bi-house-heart-fill"></i>
+          <span>择明庄园</span>
         </div>
       </div>
       <div class="nav-actions">
-        <button class="btn-icon" @click="toggleTheme">
-          <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+        <button class="theme-btn" @click="toggleTheme">
+          <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill'"></i>
         </button>
-        <button class="btn-icon" @click="sharePost">
+        <button class="share-btn" @click="sharePost">
           <i class="bi bi-share-fill"></i>
         </button>
       </div>
     </nav>
 
     <!-- 主内容 -->
-    <div class="main-content">
+    <main class="detail-content">
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-state">
-        <div class="spinner-wrapper">
-          <div class="spinner"></div>
-          <div class="spinner-ring"></div>
+        <div class="loading-flower">
+          <i class="bi bi-flower1"></i>
         </div>
-        <span class="loading-text">加载中...</span>
+        <span>加载中...</span>
       </div>
 
       <template v-else-if="postDetail">
-        <!-- 帖子头部信息 -->
-        <div class="post-header-card">
-          <div class="category-badge" :style="getCategoryStyle(postDetail.categoryName)">
+        <!-- 帖子卡片 -->
+        <article class="post-detail-card">
+          <!-- 分类标签 -->
+          <div class="category-tag" :style="getCategoryStyle(postDetail.categoryName)">
             <i class="bi bi-folder-fill"></i>
             {{ postDetail.categoryName || '未分类' }}
           </div>
+
+          <!-- 标题 -->
           <h1 class="post-title">{{ postDetail.title }}</h1>
-          <div class="post-meta">
-            <div class="author-info">
-              <img :src="postDetail.authorAvatar || defaultAvatar" class="author-avatar" @click="goToUserProfile(postDetail.userId)" />
-              <div class="author-details">
-                <span class="author-name" @click="goToUserProfile(postDetail.userId)">{{ postDetail.authorName || '匿名用户' }}</span>
+
+          <!-- 作者信息 -->
+          <div class="author-bar">
+            <div class="author-info" @click="goToAuthorProfile">
+              <div class="author-avatar">
+                <img v-if="postDetail.authorAvatar" :src="postDetail.authorAvatar" />
+                <i v-else class="bi bi-person-fill"></i>
+              </div>
+              <div class="author-meta">
+                <span class="author-name">{{ postDetail.authorName || '匿名用户' }}</span>
                 <span class="post-time">
                   <i class="bi bi-clock"></i>
                   {{ formatTime(postDetail.createdAt) }}
                 </span>
-                <!-- 关注作者按钮 -->
-                <button
-                  v-if="!isAuthor && postDetail.userId"
-                  :class="['follow-author-btn', { following: isFollowingAuthor }]"
-                  @click.stop="toggleFollowAuthor"
-                  :disabled="followLoading"
-                >
-                  <i v-if="followLoading" class="bi bi-arrow-repeat spinning"></i>
-                  <i v-else :class="isFollowingAuthor ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
-                  <span>{{ isFollowingAuthor ? '已关注' : '关注' }}</span>
-                </button>
               </div>
             </div>
-            <div class="post-stats">
-              <span class="stat-item">
+            <div class="author-actions">
+              <button 
+                v-if="!isAuthor && postDetail.userId" 
+                class="follow-btn"
+                :class="{ following: postDetail.isFollowing }"
+                @click.stop="toggleFollow"
+              >
+                <i class="bi" :class="postDetail.isFollowing ? 'bi-person-check-fill' : 'bi-person-plus-fill'"></i>
+                {{ postDetail.isFollowing ? '已关注' : '关注' }}
+              </button>
+              <span class="view-count">
                 <i class="bi bi-eye-fill"></i>
                 {{ formatNumber(postDetail.viewCount || 0) }}
               </span>
             </div>
           </div>
-        </div>
 
-        <!-- 帖子内容 -->
-        <div class="post-content-card">
-          <div class="content-body">{{ postDetail.content }}</div>
-          
-          <!-- 帖子操作 -->
-          <div class="post-actions">
+          <!-- 帖子内容 -->
+          <div class="post-body">
+            {{ postDetail.content }}
+          </div>
+
+          <!-- AI 内容总结 -->
+          <AIAssistant
+            v-if="postDetail.content && postDetail.content.length > 100"
+            type="summary"
+            :content="postDetail.content"
+          />
+
+          <!-- 标签 -->
+          <div v-if="postDetail.tags && postDetail.tags.length > 0" class="post-tags">
+            <span 
+              v-for="tag in postDetail.tags" 
+              :key="tag.id"
+              class="tag-item"
+              :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color + '40' }"
+            >
+              <i class="bi bi-tag-fill"></i>
+              {{ tag.name }}
+            </span>
+          </div>
+
+          <!-- 互动按钮 -->
+          <div class="interaction-bar">
             <button
-              class="action-btn like-btn"
+              class="interaction-btn like-btn"
               :class="{ active: postDetail.isLiked }"
               @click="toggleLike"
             >
-              <div class="btn-icon-wrapper">
+              <div class="btn-icon">
                 <i class="bi" :class="postDetail.isLiked ? 'bi-heart-fill' : 'bi-heart'"></i>
               </div>
-              <span class="btn-text">{{ postDetail.isLiked ? '已点赞' : '点赞' }}</span>
+              <span class="btn-label">{{ postDetail.isLiked ? '已点赞' : '点赞' }}</span>
               <span class="btn-count">{{ formatNumber(postDetail.likeCount || 0) }}</span>
             </button>
             
             <button
-              class="action-btn collect-btn"
+              class="interaction-btn collect-btn"
               :class="{ active: postDetail.isCollected }"
               @click="toggleCollect"
             >
-              <div class="btn-icon-wrapper">
+              <div class="btn-icon">
                 <i class="bi" :class="postDetail.isCollected ? 'bi-bookmark-fill' : 'bi-bookmark'"></i>
               </div>
-              <span class="btn-text">{{ postDetail.isCollected ? '已收藏' : '收藏' }}</span>
+              <span class="btn-label">{{ postDetail.isCollected ? '已收藏' : '收藏' }}</span>
               <span class="btn-count">{{ formatNumber(postDetail.collectCount || 0) }}</span>
             </button>
             
-            <button class="action-btn comment-btn" @click="scrollToComments">
-              <div class="btn-icon-wrapper">
-                <i class="bi bi-chat-fill"></i>
+            <button class="interaction-btn comment-btn" @click="scrollToComments">
+              <div class="btn-icon">
+                <i class="bi bi-chat-heart-fill"></i>
               </div>
-              <span class="btn-text">评论</span>
+              <span class="btn-label">评论</span>
               <span class="btn-count">{{ formatNumber(comments.length || 0) }}</span>
             </button>
           </div>
 
-          <!-- 编辑删除按钮（仅作者可见） -->
-          <div v-if="isAuthor" class="author-actions">
-            <button class="edit-btn" @click="editPost">
+          <!-- 作者操作 -->
+          <div v-if="isAuthor" class="owner-actions">
+            <button class="owner-btn edit-btn" @click="editPost">
               <i class="bi bi-pencil-square"></i>
               编辑帖子
             </button>
-            <button class="delete-btn" @click="deletePost">
+            <button class="owner-btn delete-btn" @click="deletePost">
               <i class="bi bi-trash-fill"></i>
               删除帖子
             </button>
           </div>
-        </div>
+        </article>
 
         <!-- 评论区 -->
-        <div id="comments-section" class="comments-card">
-          <div class="comments-header">
+        <section id="comments-section" class="comments-section">
+          <div class="section-header">
             <div class="header-title">
               <i class="bi bi-chat-dots-fill"></i>
               <h3>评论交流</h3>
-              <span class="comment-count">{{ comments.length }}</span>
+              <span class="comment-badge">{{ comments.length }}</span>
             </div>
           </div>
 
-          <!-- 评论输入框 -->
-          <div v-if="isLoggedIn" class="comment-input-area">
-            <div class="input-wrapper">
-              <img :src="currentUserAvatar" class="user-avatar" />
-              <div class="input-box">
-                <textarea
-                  v-model="newComment"
-                  placeholder="写下你的想法，与大家交流..."
-                  rows="3"
-                  @keydown.enter.ctrl="submitComment"
-                ></textarea>
-                <div class="input-actions">
-                  <span class="hint">Ctrl + Enter 发送</span>
-                  <button 
-                    class="submit-btn" 
-                    @click="submitComment"
-                    :disabled="!newComment.trim()"
-                  >
-                    <i class="bi bi-send-fill"></i>
-                    发表评论
-                  </button>
-                </div>
+          <!-- AI 回复建议 -->
+          <AIAssistant
+            v-if="isLoggedIn && postDetail.content"
+            type="reply"
+            :content="postDetail.content"
+            :existing-comments="comments.map(c => c.content)"
+            @select-suggestion="newComment = $event"
+          />
+
+          <!-- 评论输入 -->
+          <div v-if="isLoggedIn" class="comment-input-wrapper">
+            <div class="current-user-avatar">
+              <img v-if="currentUserAvatar" :src="currentUserAvatar" />
+              <i v-else class="bi bi-person-fill"></i>
+            </div>
+            <div class="input-area">
+              <textarea
+                v-model="newComment"
+                placeholder="写下你的想法，与大家交流..."
+                rows="3"
+                @keydown.enter.ctrl="submitComment"
+              ></textarea>
+              <div class="input-actions">
+                <span class="input-hint">Ctrl + Enter 发送</span>
+                <button
+                  class="submit-comment-btn"
+                  @click="submitComment"
+                  :disabled="!newComment.trim()"
+                >
+                  <i class="bi bi-send-fill"></i>
+                  发表评论
+                </button>
               </div>
             </div>
           </div>
           
-          <div v-else class="login-tip">
-            <div class="tip-content">
-              <i class="bi bi-person-circle"></i>
-              <p>登录后即可参与讨论</p>
-              <router-link to="/login" class="login-btn">立即登录</router-link>
-            </div>
+          <div v-else class="login-prompt">
+            <i class="bi bi-person-circle"></i>
+            <p>登录后即可参与讨论</p>
+            <router-link to="/login" class="login-link">立即登录</router-link>
           </div>
 
           <!-- 评论列表 -->
@@ -181,16 +208,19 @@
             <div
               v-for="(comment, index) in comments"
               :key="comment.id"
-              class="comment-item"
+              class="comment-card"
               :style="{ animationDelay: `${index * 0.1}s` }"
             >
-              <img :src="comment.authorAvatar || defaultAvatar" class="comment-avatar" />
-              <div class="comment-body">
+              <div class="comment-user-avatar">
+                <img v-if="comment.authorAvatar" :src="comment.authorAvatar" />
+                <i v-else class="bi bi-person-fill"></i>
+              </div>
+              <div class="comment-content-wrapper">
                 <div class="comment-header">
                   <span class="comment-author">{{ comment.authorName }}</span>
                   <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                 </div>
-                <div class="comment-content">{{ comment.content }}</div>
+                <div class="comment-text">{{ comment.content }}</div>
                 <div class="comment-actions">
                   <button class="action-link" @click="replyTo(comment)">
                     <i class="bi bi-reply-fill"></i>
@@ -198,7 +228,7 @@
                   </button>
                   <button 
                     v-if="comment.authorId === currentUserId" 
-                    class="action-link delete"
+                    class="action-link delete-link"
                     @click="deleteComment(comment.id)"
                   >
                     <i class="bi bi-trash"></i>
@@ -211,21 +241,24 @@
                   <div
                     v-for="reply in comment.replies"
                     :key="reply.id"
-                    class="reply-item"
+                    class="reply-card"
                   >
-                    <img :src="reply.authorAvatar || defaultAvatar" class="reply-avatar" />
-                    <div class="reply-body">
+                    <div class="reply-user-avatar">
+                      <img v-if="reply.authorAvatar" :src="reply.authorAvatar" />
+                      <i v-else class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="reply-content-wrapper">
                       <div class="reply-header">
                         <span class="reply-author">{{ reply.authorName }}</span>
                         <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
                       </div>
-                      <div class="reply-content">{{ reply.content }}</div>
+                      <div class="reply-text">{{ reply.content }}</div>
                     </div>
                   </div>
                 </div>
 
-                <!-- 回复输入框 -->
-                <div v-if="replyingTo === comment.id" class="reply-input-area">
+                <!-- 回复输入 -->
+                <div v-if="replyingTo === comment.id" class="reply-input-wrapper">
                   <textarea
                     v-model="replyContent"
                     :placeholder="`回复 @${comment.authorName}...`"
@@ -233,9 +266,9 @@
                     @keydown.enter.ctrl="submitReply(comment.id)"
                   ></textarea>
                   <div class="reply-actions">
-                    <button class="cancel-btn" @click="cancelReply">取消</button>
+                    <button class="cancel-reply-btn" @click="cancelReply">取消</button>
                     <button 
-                      class="submit-btn" 
+                      class="submit-reply-btn" 
                       @click="submitReply(comment.id)"
                       :disabled="!replyContent.trim()"
                     >
@@ -254,7 +287,7 @@
             <h4>暂无评论</h4>
             <p>成为第一个评论的人吧！</p>
           </div>
-        </div>
+        </section>
       </template>
 
       <!-- 帖子不存在 -->
@@ -269,10 +302,10 @@
           返回首页
         </button>
       </div>
-    </div>
+    </main>
 
     <!-- 底部导航 -->
-    <BottomNav />
+    <ManorBottomNav :isDarkMode="isDarkMode" />
   </div>
 </template>
 
@@ -280,7 +313,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get, post, del, getAccessToken } from '@/utils/request'
-import BottomNav from '@/components/BottomNav.vue'
+import ManorBackground from '@/components/ManorBackground.vue'
+import ManorBottomNav from '@/components/ManorBottomNav.vue'
+import AIAssistant from '@/components/AIAssistant.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -298,15 +333,12 @@ const comments = ref([])
 const newComment = ref('')
 const replyingTo = ref(null)
 const replyContent = ref('')
-const isFollowingAuthor = ref(false)
-const followLoading = ref(false)
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
 
 // 计算属性
 const isAuthor = computed(() => {
-  if (!postDetail.value || !postDetail.value.userId || !currentUserId.value) return false
-  return String(postDetail.value.userId) === String(currentUserId.value)
+  return postDetail.value && postDetail.value.userId === currentUserId.value
 })
 
 // 方法
@@ -334,10 +366,6 @@ async function loadPost() {
     if (res.code === 200) {
       postDetail.value = res.data
       await loadComments(id)
-      // 检查是否已关注作者
-      if (currentUserId.value && postDetail.value.userId && !isAuthor.value) {
-        await checkFollowStatus()
-      }
     } else {
       postDetail.value = null
     }
@@ -346,60 +374,17 @@ async function loadPost() {
   }
 }
 
-// 检查是否已关注作者
-async function checkFollowStatus() {
-  try {
-    const res = await get(`/follows/${postDetail.value.userId}/check`)
-    if (res.code === 200) {
-      isFollowingAuthor.value = res.data
-    }
-  } catch (error) {
-    console.error('检查关注状态失败', error)
-  }
-}
-
-// 关注/取消关注作者
-async function toggleFollowAuthor() {
-  if (!isLoggedIn.value) {
-    alert('请先登录')
-    router.push('/login')
-    return
-  }
-
-  followLoading.value = true
-  try {
-    if (isFollowingAuthor.value) {
-      // 取消关注
-      const res = await del(`/follows/${postDetail.value.userId}`)
-      if (res.code === 200) {
-        isFollowingAuthor.value = false
-      }
-    } else {
-      // 关注
-      const res = await post(`/follows/${postDetail.value.userId}`)
-      if (res.code === 200) {
-        isFollowingAuthor.value = true
-      }
-    }
-  } catch (error) {
-    console.error('关注操作失败', error)
-    alert('操作失败，请重试')
-  } finally {
-    followLoading.value = false
-  }
-}
-
-// 跳转到用户主页
-function goToUserProfile(userId) {
-  if (userId) {
-    router.push(`/user/${userId}`)
-  }
-}
-
 async function loadComments(postId) {
   const res = await get(`/comments/post/${postId}`)
   if (res.code === 200) {
-    comments.value = res.data || []
+    const pageData = res.data
+    if (pageData && pageData.content) {
+      comments.value = pageData.content
+    } else if (Array.isArray(pageData)) {
+      comments.value = pageData
+    } else {
+      comments.value = []
+    }
   }
 }
 
@@ -409,10 +394,18 @@ async function toggleLike() {
     return
   }
 
-  const res = await post(`/interactions/like/${postDetail.value.id}`)
-  if (res.code === 200) {
-    postDetail.value.isLiked = !postDetail.value.isLiked
-    postDetail.value.likeCount = (postDetail.value.likeCount || 0) + (postDetail.value.isLiked ? 1 : -1)
+  if (postDetail.value.isLiked) {
+    const res = await del(`/interactions/like/post/${postDetail.value.id}`)
+    if (res.code === 200) {
+      postDetail.value.isLiked = false
+      postDetail.value.likeCount = Math.max(0, (postDetail.value.likeCount || 0) - 1)
+    }
+  } else {
+    const res = await post(`/interactions/like/post/${postDetail.value.id}`)
+    if (res.code === 200) {
+      postDetail.value.isLiked = true
+      postDetail.value.likeCount = (postDetail.value.likeCount || 0) + 1
+    }
   }
 }
 
@@ -422,10 +415,46 @@ async function toggleCollect() {
     return
   }
 
-  const res = await post(`/interactions/collect/${postDetail.value.id}`)
-  if (res.code === 200) {
-    postDetail.value.isCollected = !postDetail.value.isCollected
-    postDetail.value.collectCount = (postDetail.value.collectCount || 0) + (postDetail.value.isCollected ? 1 : -1)
+  if (postDetail.value.isCollected) {
+    const res = await del(`/interactions/collect/${postDetail.value.id}`)
+    if (res.code === 200) {
+      postDetail.value.isCollected = false
+      postDetail.value.collectCount = Math.max(0, (postDetail.value.collectCount || 0) - 1)
+    }
+  } else {
+    const res = await post(`/interactions/collect/${postDetail.value.id}`)
+    if (res.code === 200) {
+      postDetail.value.isCollected = true
+      postDetail.value.collectCount = (postDetail.value.collectCount || 0) + 1
+    }
+  }
+}
+
+function goToAuthorProfile() {
+  if (postDetail.value && postDetail.value.userId) {
+    router.push(`/user/${postDetail.value.userId}`)
+  }
+}
+
+async function toggleFollow() {
+  if (!isLoggedIn.value) {
+    router.push('/login')
+    return
+  }
+
+  const authorId = postDetail.value.userId
+  if (!authorId) return
+
+  if (postDetail.value.isFollowing) {
+    const res = await del(`/follows/${authorId}`)
+    if (res.code === 200) {
+      postDetail.value.isFollowing = false
+    }
+  } else {
+    const res = await post(`/follows/${authorId}`)
+    if (res.code === 200) {
+      postDetail.value.isFollowing = true
+    }
   }
 }
 
@@ -447,7 +476,7 @@ function scrollToComments() {
 }
 
 function editPost() {
-  router.push(`/post/${postDetail.value.id}/edit`)
+  router.push(`/edit/${postDetail.value.id}`)
 }
 
 async function deletePost() {
@@ -552,15 +581,16 @@ function formatNumber(num) {
 
 function getCategoryStyle(categoryName) {
   const colors = {
-    '技术': { bg: '#e0e7ff', color: '#4f46e5' },
-    '生活': { bg: '#fce7f3', color: '#db2777' },
-    '娱乐': { bg: '#dbeafe', color: '#2563eb' },
-    '学习': { bg: '#d1fae5', color: '#059669' }
+    '技术': { bg: '#e8f5e9', color: '#4a7c59', border: '#8FBC8F' },
+    '生活': { bg: '#fce4ec', color: '#ad1457', border: '#F48FB1' },
+    '娱乐': { bg: '#e3f2fd', color: '#1565c0', border: '#90CAF9' },
+    '学习': { bg: '#e8f5e9', color: '#2e7d32', border: '#A5D6A7' }
   }
-  const style = colors[categoryName] || { bg: '#f3f4f6', color: '#6b7280' }
+  const style = colors[categoryName] || { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' }
   return {
-    background: style.bg,
-    color: style.color
+    backgroundColor: style.bg,
+    color: style.color,
+    borderColor: style.border
   }
 }
 
@@ -573,193 +603,128 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.post-detail-page {
+.manor-post-detail {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-  padding-bottom: 80px;
   position: relative;
-  overflow-x: hidden;
+  padding-bottom: 100px;
 }
 
-.dark-mode {
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
-}
-
-/* 动态背景 */
-.animated-bg {
+/* 顶部导航 */
+.detail-top-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 20s infinite ease-in-out;
-}
-
-.orb-1 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -100px;
-  right: -100px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: 20%;
-  left: -100px;
-  animation-delay: -7s;
-}
-
-.orb-3 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 40%;
-  right: 10%;
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -30px) scale(1.1); }
-  50% { transform: translate(-20px, 20px) scale(0.9); }
-  75% { transform: translate(20px, 30px) scale(1.05); }
-}
-
-.dark-mode .gradient-orb {
-  opacity: 0.2;
-}
-
-/* 顶部导航 */
-.top-nav {
+  height: 70px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 115, 85, 0.15);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  position: sticky;
-  top: 0;
+  justify-content: space-between;
+  padding: 0 20px;
   z-index: 100;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.dark-mode .top-nav {
-  background: rgba(30, 30, 46, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .detail-top-nav {
+  background: rgba(30, 35, 45, 0.9);
+  border-bottom-color: rgba(100, 110, 130, 0.2);
 }
 
 .nav-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .back-btn {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  color: #4a5568;
+  border-radius: 50%;
+  background: rgba(139, 188, 143, 0.15);
+  color: #5a7c5a;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1.2rem;
 }
 
-.dark-mode .back-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+.night-mode .back-btn {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
 }
 
 .back-btn:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: rgba(139, 188, 143, 0.3);
+  transform: translateX(-2px);
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.logo-wrapper {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-wrapper i {
-  font-size: 1.2rem;
-  color: white;
-}
-
-.brand-text {
-  font-size: 1.1rem;
+  cursor: pointer;
+  font-size: 20px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #5a7c5a;
+  font-family: 'Georgia', serif;
+}
+
+.night-mode .nav-brand {
+  color: #8ab88a;
+}
+
+.nav-brand i {
+  font-size: 24px;
+  color: #8FBC8F;
+}
+
+.night-mode .nav-brand i {
+  color: #7ac87a;
 }
 
 .nav-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
 }
 
-.btn-icon {
+.theme-btn, .share-btn {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  color: #4a5568;
+  border-radius: 50%;
+  background: rgba(139, 115, 85, 0.1);
+  color: #8B7355;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1.1rem;
 }
 
-.dark-mode .btn-icon {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+.night-mode .theme-btn,
+.night-mode .share-btn {
+  background: rgba(200, 180, 150, 0.1);
+  color: #D4C596;
 }
 
-.btn-icon:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  transform: translateY(-2px);
+.theme-btn:hover, .share-btn:hover {
+  background: rgba(139, 115, 85, 0.2);
+  transform: scale(1.05);
 }
 
 /* 主内容 */
-.main-content {
-  position: relative;
-  z-index: 1;
-  padding: 20px;
+.detail-content {
   max-width: 800px;
   margin: 0 auto;
+  padding: 90px 20px 40px;
+  position: relative;
+  z-index: 1;
 }
 
 /* 加载状态 */
@@ -767,319 +732,323 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80px 20px;
+  justify-content: center;
+  padding: 100px 20px;
+  gap: 16px;
 }
 
-.spinner-wrapper {
-  position: relative;
+.loading-flower {
   width: 60px;
   height: 60px;
-  margin-bottom: 16px;
-}
-
-.spinner {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 3px solid transparent;
-  border-top-color: #667eea;
+  background: rgba(139, 188, 143, 0.2);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: #8FBC8F;
+  animation: pulse 2s infinite ease-in-out;
 }
 
-.spinner-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 3px solid rgba(102, 126, 234, 0.2);
-  border-radius: 50%;
+.night-mode .loading-flower {
+  background: rgba(74, 124, 90, 0.2);
+  color: #7ac87a;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
 }
 
-.loading-text {
-  font-size: 0.95rem;
-  color: #718096;
+.loading-state span {
+  color: #6a7c6a;
+  font-size: 15px;
 }
 
-/* 帖子头部卡片 */
-.post-header-card {
-  background: white;
+.night-mode .loading-state span {
+  color: #9ab89a;
+}
+
+/* 帖子卡片 */
+.post-detail-card {
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
 }
 
-.dark-mode .post-header-card {
-  background: rgba(45, 45, 68, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .post-detail-card {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
-.category-badge {
+.category-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 13px;
   font-weight: 600;
   margin-bottom: 16px;
+  border: 1px solid;
 }
 
 .post-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #1a202c;
+  font-size: 26px;
+  font-weight: 700;
+  color: #2d3748;
   line-height: 1.4;
   margin-bottom: 20px;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .post-title {
-  color: #f7fafc;
+.night-mode .post-title {
+  color: #e2e8f0;
 }
 
-.post-meta {
+/* 作者栏 */
+.author-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-top: 1px solid rgba(139, 188, 143, 0.15);
+  border-bottom: 1px solid rgba(139, 188, 143, 0.15);
+  margin-bottom: 24px;
+}
+
+.night-mode .author-bar {
+  border-color: rgba(74, 124, 90, 0.15);
 }
 
 .author-info {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.author-info:hover {
+  opacity: 0.8;
 }
 
 .author-avatar {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #8FBC8F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(143, 188, 143, 0.2);
+  color: #5a7c5a;
+  font-size: 24px;
+}
+
+.night-mode .author-avatar {
+  border-color: #4a7c5a;
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
+}
+
+.author-avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 2px solid rgba(102, 126, 234, 0.2);
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-.author-avatar:hover {
-  transform: scale(1.1);
-  border-color: #667eea;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-.author-details {
+.author-meta {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .author-name {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #2d3748;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #5a7c5a;
+  font-size: 15px;
 }
 
-.author-name:hover {
-  color: #667eea;
+.night-mode .author-name {
+  color: #8ab88a;
 }
 
-.dark-mode .author-name {
-  color: #e2e8f0;
-}
-
-.dark-mode .author-name:hover {
-  color: #a0b4f0;
-}
-
-/* 关注作者按钮 */
-.follow-author-btn {
+.post-time {
+  font-size: 13px;
+  color: #8a9a8a;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 14px;
-  margin-top: 8px;
-  border: 1px solid #667eea;
+}
+
+.night-mode .post-time {
+  color: #7a9a8a;
+}
+
+.author-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
   border-radius: 20px;
-  background: transparent;
-  color: #667eea;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  color: white;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.follow-author-btn:hover:not(:disabled) {
-  background: rgba(102, 126, 234, 0.1);
+.follow-btn.following {
+  background: rgba(139, 188, 143, 0.2);
+  color: #5a7c5a;
 }
 
-.follow-author-btn.following {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: transparent;
-  color: #666;
+.night-mode .follow-btn.following {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
 }
 
-.dark-mode .follow-author-btn.following {
-  color: #a0a0c0;
+.follow-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 184, 124, 0.3);
 }
 
-.follow-author-btn.following:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
-}
-
-.follow-author-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.post-time {
-  font-size: 0.8rem;
-  color: #a0aec0;
+.view-count {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 13px;
+  color: #8a9a8a;
 }
 
-.post-stats {
-  display: flex;
-  gap: 16px;
+.night-mode .view-count {
+  color: #7a9a8a;
 }
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-  color: #718096;
-}
-
-.stat-item i {
-  color: #667eea;
-}
-
-/* 帖子内容卡片 */
-.post-content-card {
-  background: white;
-  border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.dark-mode .post-content-card {
-  background: rgba(45, 45, 68, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.content-body {
-  font-size: 1rem;
+/* 帖子内容 */
+.post-body {
+  font-size: 16px;
   line-height: 1.8;
   color: #4a5568;
   white-space: pre-wrap;
   margin-bottom: 24px;
 }
 
-.dark-mode .content-body {
+.night-mode .post-body {
   color: #cbd5e0;
 }
 
-/* 帖子操作 */
-.post-actions {
+/* 标签 */
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+/* 互动栏 */
+.interaction-bar {
   display: flex;
   gap: 12px;
   padding-top: 20px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(139, 188, 143, 0.15);
 }
 
-.dark-mode .post-actions {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .interaction-bar {
+  border-color: rgba(74, 124, 90, 0.15);
 }
 
-.action-btn {
+.interaction-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   padding: 12px 16px;
   border: none;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.03);
-  color: #718096;
+  border-radius: 16px;
+  background: rgba(139, 188, 143, 0.1);
+  color: #6a7c6a;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.dark-mode .action-btn {
-  background: rgba(255, 255, 255, 0.05);
-  color: #a0aec0;
+.night-mode .interaction-btn {
+  background: rgba(74, 124, 90, 0.15);
+  color: #9ab89a;
 }
 
-.action-btn:hover {
+.interaction-btn:hover {
   transform: translateY(-2px);
 }
 
-.btn-icon-wrapper {
-  font-size: 1.2rem;
+.btn-icon {
+  font-size: 18px;
 }
 
-.btn-text {
-  font-size: 0.9rem;
-  font-weight: 600;
+.btn-label {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .btn-count {
-  font-size: 0.85rem;
+  font-size: 13px;
   opacity: 0.8;
 }
 
-.like-btn:hover, .like-btn.active {
-  background: #fce7f3;
-  color: #db2777;
+.like-btn.active {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
 }
 
-.dark-mode .like-btn:hover, .dark-mode .like-btn.active {
-  background: rgba(219, 39, 119, 0.2);
-}
-
-.collect-btn:hover, .collect-btn.active {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.dark-mode .collect-btn:hover, .dark-mode .collect-btn.active {
-  background: rgba(37, 99, 235, 0.2);
+.collect-btn.active {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
 }
 
 .comment-btn:hover {
-  background: #d1fae5;
-  color: #059669;
-}
-
-.dark-mode .comment-btn:hover {
-  background: rgba(5, 150, 105, 0.2);
+  background: rgba(139, 188, 143, 0.2);
+  color: #5a7c5a;
 }
 
 /* 作者操作 */
-.author-actions {
+.owner-actions {
   display: flex;
   gap: 12px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(139, 188, 143, 0.15);
 }
 
-.dark-mode .author-actions {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .owner-actions {
+  border-color: rgba(74, 124, 90, 0.15);
 }
 
-.edit-btn, .delete-btn {
+.owner-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -1087,48 +1056,53 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 16px;
   border: none;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .edit-btn {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: rgba(139, 188, 143, 0.15);
+  color: #5a7c5a;
+}
+
+.night-mode .edit-btn {
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
 }
 
 .edit-btn:hover {
-  background: #4f46e5;
+  background: #8FBC8F;
   color: white;
 }
 
 .delete-btn {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
 }
 
 .delete-btn:hover {
-  background: #dc2626;
+  background: #ff6b6b;
   color: white;
 }
 
-/* 评论区卡片 */
-.comments-card {
-  background: white;
+/* 评论区 */
+.comments-section {
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 188, 143, 0.2);
 }
 
-.dark-mode .comments-card {
-  background: rgba(45, 45, 68, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .comments-section {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
-.comments-header {
+.section-header {
   margin-bottom: 20px;
 }
 
@@ -1139,75 +1113,96 @@ onMounted(() => {
 }
 
 .header-title i {
-  font-size: 1.3rem;
-  color: #667eea;
+  font-size: 20px;
+  color: #8FBC8F;
+}
+
+.night-mode .header-title i {
+  color: #7ac87a;
 }
 
 .header-title h3 {
-  font-size: 1.2rem;
+  font-size: 18px;
   font-weight: 700;
   color: #2d3748;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .header-title h3 {
+.night-mode .header-title h3 {
   color: #e2e8f0;
 }
 
-.comment-count {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.comment-badge {
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 13px;
   font-weight: 600;
 }
 
-/* 评论输入区 */
-.comment-input-area {
+/* 评论输入 */
+.comment-input-wrapper {
+  display: flex;
+  gap: 12px;
   margin-bottom: 24px;
 }
 
-.input-wrapper {
-  display: flex;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
+.current-user-avatar {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(102, 126, 234, 0.2);
+  overflow: hidden;
+  border: 2px solid #8FBC8F;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(143, 188, 143, 0.2);
+  color: #5a7c5a;
+  font-size: 20px;
 }
 
-.input-box {
+.night-mode .current-user-avatar {
+  border-color: #4a7c5a;
+  background: rgba(74, 124, 90, 0.2);
+  color: #8ab88a;
+}
+
+.current-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.input-area {
   flex: 1;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(139, 188, 143, 0.08);
   border-radius: 16px;
   padding: 16px;
 }
 
-.dark-mode .input-box {
-  background: rgba(255, 255, 255, 0.05);
+.night-mode .input-area {
+  background: rgba(74, 124, 90, 0.1);
 }
 
-.input-box textarea {
+.input-area textarea {
   width: 100%;
   border: none;
   background: transparent;
   resize: none;
-  font-size: 0.95rem;
+  font-size: 15px;
   color: #2d3748;
   outline: none;
+  font-family: inherit;
 }
 
-.dark-mode .input-box textarea {
+.night-mode .input-area textarea {
   color: #e2e8f0;
 }
 
-.input-box textarea::placeholder {
-  color: #a0aec0;
+.input-area textarea::placeholder {
+  color: #8a9a8a;
 }
 
 .input-actions {
@@ -1217,85 +1212,99 @@ onMounted(() => {
   margin-top: 12px;
 }
 
-.hint {
-  font-size: 0.8rem;
-  color: #a0aec0;
+.input-hint {
+  font-size: 12px;
+  color: #8a9a8a;
 }
 
-.submit-btn {
+.night-mode .input-hint {
+  color: #7a9a8a;
+}
+
+.submit-comment-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 20px;
   border: none;
   border-radius: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.submit-btn:hover:not(:disabled) {
+.submit-comment-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(124, 184, 124, 0.3);
 }
 
-.submit-btn:disabled {
+.submit-comment-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* 登录提示 */
-.login-tip {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+.login-prompt {
+  background: rgba(139, 188, 143, 0.1);
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 24px;
   text-align: center;
-}
-
-.tip-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 
-.tip-content i {
-  font-size: 3rem;
-  color: #667eea;
+.night-mode .login-prompt {
+  background: rgba(74, 124, 90, 0.15);
 }
 
-.tip-content p {
-  color: #718096;
-  font-size: 0.95rem;
+.login-prompt i {
+  font-size: 40px;
+  color: #8FBC8F;
 }
 
-.login-btn {
+.night-mode .login-prompt i {
+  color: #7ac87a;
+}
+
+.login-prompt p {
+  color: #6a7c6a;
+  font-size: 15px;
+}
+
+.night-mode .login-prompt p {
+  color: #9ab89a;
+}
+
+.login-link {
   padding: 10px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
   border-radius: 20px;
   text-decoration: none;
   font-weight: 600;
+  font-size: 14px;
   transition: all 0.3s ease;
 }
 
-.login-btn:hover {
+.login-link:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(124, 184, 124, 0.3);
 }
 
 /* 评论列表 */
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
-.comment-item {
+.comment-card {
   display: flex;
   gap: 12px;
   animation: slide-up 0.5s ease forwards;
@@ -1310,24 +1319,42 @@ onMounted(() => {
   }
 }
 
-.comment-avatar {
+.comment-user-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(102, 126, 234, 0.2);
+  overflow: hidden;
+  border: 2px solid rgba(143, 188, 143, 0.3);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(143, 188, 143, 0.15);
+  color: #5a7c5a;
+  font-size: 18px;
 }
 
-.comment-body {
+.night-mode .comment-user-avatar {
+  border-color: rgba(74, 124, 90, 0.3);
+  background: rgba(74, 124, 90, 0.15);
+  color: #8ab88a;
+}
+
+.comment-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.comment-content-wrapper {
   flex: 1;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(139, 188, 143, 0.06);
   border-radius: 16px;
-  padding: 16px;
+  padding: 14px;
 }
 
-.dark-mode .comment-body {
-  background: rgba(255, 255, 255, 0.03);
+.night-mode .comment-content-wrapper {
+  background: rgba(74, 124, 90, 0.08);
 }
 
 .comment-header {
@@ -1338,23 +1365,32 @@ onMounted(() => {
 }
 
 .comment-author {
-  font-weight: 700;
-  color: #667eea;
-  font-size: 0.95rem;
+  font-weight: 600;
+  color: #5a7c5a;
+  font-size: 14px;
+}
+
+.night-mode .comment-author {
+  color: #8ab88a;
 }
 
 .comment-time {
-  font-size: 0.8rem;
-  color: #a0aec0;
+  font-size: 12px;
+  color: #8a9a8a;
 }
 
-.comment-content {
+.night-mode .comment-time {
+  color: #7a9a8a;
+}
+
+.comment-text {
   color: #4a5568;
   line-height: 1.6;
-  margin-bottom: 12px;
+  font-size: 14px;
+  margin-bottom: 10px;
 }
 
-.dark-mode .comment-content {
+.night-mode .comment-text {
   color: #cbd5e0;
 }
 
@@ -1369,45 +1405,71 @@ onMounted(() => {
   gap: 4px;
   background: none;
   border: none;
-  color: #718096;
-  font-size: 0.85rem;
+  color: #8a9a8a;
+  font-size: 13px;
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
-.action-link:hover {
-  color: #667eea;
+.night-mode .action-link {
+  color: #7a9a8a;
 }
 
-.action-link.delete:hover {
-  color: #dc2626;
+.action-link:hover {
+  color: #8FBC8F;
+}
+
+.night-mode .action-link:hover {
+  color: #7ac87a;
+}
+
+.action-link.delete-link:hover {
+  color: #ff6b6b;
 }
 
 /* 回复列表 */
 .replies-list {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(139, 188, 143, 0.1);
 }
 
-.dark-mode .replies-list {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .replies-list {
+  border-color: rgba(74, 124, 90, 0.1);
 }
 
-.reply-item {
+.reply-card {
   display: flex;
   gap: 10px;
-  padding: 12px 0;
+  padding: 10px 0;
 }
 
-.reply-avatar {
+.reply-user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(143, 188, 143, 0.15);
+  color: #5a7c5a;
+  font-size: 14px;
+}
+
+.night-mode .reply-user-avatar {
+  background: rgba(74, 124, 90, 0.15);
+  color: #8ab88a;
+}
+
+.reply-user-avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.reply-body {
+.reply-content-wrapper {
   flex: 1;
 }
 
@@ -1420,52 +1482,61 @@ onMounted(() => {
 
 .reply-author {
   font-weight: 600;
-  color: #667eea;
-  font-size: 0.9rem;
+  color: #5a7c5a;
+  font-size: 13px;
+}
+
+.night-mode .reply-author {
+  color: #8ab88a;
 }
 
 .reply-time {
-  font-size: 0.75rem;
-  color: #a0aec0;
+  font-size: 11px;
+  color: #8a9a8a;
 }
 
-.reply-content {
+.night-mode .reply-time {
+  color: #7a9a8a;
+}
+
+.reply-text {
   color: #4a5568;
-  font-size: 0.9rem;
+  font-size: 13px;
   line-height: 1.5;
 }
 
-.dark-mode .reply-content {
+.night-mode .reply-text {
   color: #cbd5e0;
 }
 
 /* 回复输入 */
-.reply-input-area {
+.reply-input-wrapper {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(139, 188, 143, 0.1);
 }
 
-.dark-mode .reply-input-area {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.night-mode .reply-input-wrapper {
+  border-color: rgba(74, 124, 90, 0.1);
 }
 
-.reply-input-area textarea {
+.reply-input-wrapper textarea {
   width: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(139, 188, 143, 0.2);
   border-radius: 12px;
   padding: 12px;
   background: white;
   resize: none;
-  font-size: 0.9rem;
+  font-size: 14px;
   color: #2d3748;
   outline: none;
   margin-bottom: 10px;
+  font-family: inherit;
 }
 
-.dark-mode .reply-input-area textarea {
-  background: rgba(45, 45, 68, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
+.night-mode .reply-input-wrapper textarea {
+  background: rgba(30, 35, 45, 0.8);
+  border-color: rgba(74, 124, 90, 0.2);
   color: #e2e8f0;
 }
 
@@ -1475,31 +1546,112 @@ onMounted(() => {
   gap: 10px;
 }
 
-.cancel-btn {
+.cancel-reply-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.05);
-  color: #718096;
-  font-size: 0.85rem;
+  background: rgba(139, 188, 143, 0.1);
+  color: #6a7c6a;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.cancel-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
+.night-mode .cancel-reply-btn {
+  background: rgba(74, 124, 90, 0.15);
+  color: #9ab89a;
+}
+
+.cancel-reply-btn:hover {
+  background: rgba(139, 188, 143, 0.2);
+}
+
+.submit-reply-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-reply-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 184, 124, 0.3);
+}
+
+.submit-reply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 空评论 */
 .empty-comments {
   text-align: center;
-  padding: 60px 20px;
+  padding: 50px 20px;
 }
 
-.empty-icon {
+.empty-comments .empty-icon {
+  width: 70px;
+  height: 70px;
+  background: rgba(139, 188, 143, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.empty-comments .empty-icon i {
+  font-size: 32px;
+  color: #8FBC8F;
+}
+
+.night-mode .empty-comments .empty-icon i {
+  color: #7ac87a;
+}
+
+.empty-comments h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 8px;
+  font-family: 'Georgia', serif;
+}
+
+.night-mode .empty-comments h4 {
+  color: #e2e8f0;
+}
+
+.empty-comments p {
+  color: #8a9a8a;
+  font-size: 14px;
+}
+
+.night-mode .empty-comments p {
+  color: #7a9a8a;
+}
+
+/* 404 */
+.not-found {
+  text-align: center;
+  padding: 80px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.night-mode .not-found {
+  background: rgba(40, 45, 55, 0.95);
+}
+
+.not-found .empty-icon {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: rgba(255, 107, 107, 0.1);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1507,59 +1659,30 @@ onMounted(() => {
   margin: 0 auto 20px;
 }
 
-.empty-icon i {
-  font-size: 2.5rem;
-  color: #667eea;
-}
-
-.empty-comments h4 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 8px;
-}
-
-.dark-mode .empty-comments h4 {
-  color: #e2e8f0;
-}
-
-.empty-comments p {
-  color: #a0aec0;
-  font-size: 0.9rem;
-}
-
-/* 404 */
-.not-found {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.not-found .empty-icon {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
-  margin-bottom: 24px;
-}
-
 .not-found .empty-icon i {
-  font-size: 3rem;
-  color: #dc2626;
+  font-size: 36px;
+  color: #ff6b6b;
 }
 
 .not-found h3 {
-  font-size: 1.3rem;
+  font-size: 20px;
   font-weight: 700;
   color: #2d3748;
   margin-bottom: 8px;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .not-found h3 {
+.night-mode .not-found h3 {
   color: #e2e8f0;
 }
 
 .not-found p {
-  color: #a0aec0;
+  color: #8a9a8a;
   margin-bottom: 24px;
+}
+
+.night-mode .not-found p {
+  color: #7a9a8a;
 }
 
 .back-home-btn {
@@ -1569,9 +1692,9 @@ onMounted(() => {
   padding: 12px 24px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F, #7CB87C);
   color: white;
-  font-size: 0.95rem;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1579,6 +1702,46 @@ onMounted(() => {
 
 .back-home-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(124, 184, 124, 0.3);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .detail-content {
+    padding: 80px 16px 40px;
+  }
+
+  .post-detail-card {
+    padding: 20px;
+  }
+
+  .post-title {
+    font-size: 22px;
+  }
+
+  .author-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .author-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .interaction-bar {
+    flex-wrap: wrap;
+  }
+
+  .interaction-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 12px;
+  }
+
+  .btn-label {
+    display: none;
+  }
 }
 </style>

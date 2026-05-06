@@ -1,18 +1,11 @@
 <template>
-  <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- 动态背景 -->
-    <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
-
-    <!-- 粒子效果 -->
-    <div class="particles" ref="particlesRef"></div>
+  <div class="manor-login" :class="{ 'night-mode': isDarkMode }">
+    <!-- 庄园背景 -->
+    <ManorBackground :isDarkMode="isDarkMode" />
 
     <!-- 主题切换 -->
     <button class="theme-toggle" @click="toggleTheme">
-      <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+      <i :class="isDarkMode ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill'"></i>
     </button>
 
     <!-- 登录容器 -->
@@ -21,22 +14,22 @@
       <div class="login-decoration">
         <div class="decoration-content">
           <div class="logo-icon">
-            <i class="bi bi-lightbulb-fill"></i>
+            <i class="bi bi-house-heart-fill"></i>
           </div>
-          <h2 class="decoration-title">择明论坛</h2>
-          <p class="decoration-subtitle">智慧之光，照亮前行之路</p>
+          <h2 class="decoration-title">择明庄园</h2>
+          <p class="decoration-subtitle">欢迎来到宁静的庄园世界</p>
           <div class="feature-list">
             <div class="feature-item">
-              <i class="bi bi-check-circle-fill"></i>
-              <span>探索知识的海洋</span>
+              <i class="bi bi-flower1"></i>
+              <span>在庄园中分享你的故事</span>
             </div>
             <div class="feature-item">
-              <i class="bi bi-check-circle-fill"></i>
-              <span>分享你的见解</span>
+              <i class="bi bi-tree-fill"></i>
+              <span>与志同道合的朋友交流</span>
             </div>
             <div class="feature-item">
-              <i class="bi bi-check-circle-fill"></i>
-              <span>与志同道合者交流</span>
+              <i class="bi bi-sun-fill"></i>
+              <span>享受温暖的社区氛围</span>
             </div>
           </div>
         </div>
@@ -51,7 +44,7 @@
       <div class="login-form-wrapper">
         <div class="form-header">
           <h3>欢迎回来</h3>
-          <p>登录你的账号，开启探索之旅</p>
+          <p>登录你的账号，进入庄园</p>
         </div>
 
         <form @submit.prevent="handleLogin" class="login-form">
@@ -68,7 +61,6 @@
                 required
                 class="form-input"
               />
-              <div class="input-focus-border"></div>
             </div>
           </div>
 
@@ -92,7 +84,6 @@
               >
                 <i :class="showPassword ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
               </button>
-              <div class="input-focus-border"></div>
             </div>
           </div>
 
@@ -139,7 +130,7 @@
 
     <!-- 页脚 -->
     <footer class="login-footer">
-      <p>&copy; 2024 择明论坛. All rights reserved.</p>
+      <p>&copy; 2024 择明庄园. All rights reserved.</p>
     </footer>
   </div>
 </template>
@@ -148,35 +139,18 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { post, setTokens } from '@/utils/request'
+import ManorBackground from '@/components/ManorBackground.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const showPassword = ref(false)
 const isDarkMode = ref(false)
-const particlesRef = ref(null)
 
 const form = reactive({
   username: '',
   password: '',
   rememberMe: false
 })
-
-// 生成粒子
-function generateParticles() {
-  if (!particlesRef.value) return
-  particlesRef.value.innerHTML = ''
-  for (let i = 0; i < 50; i++) {
-    const particle = document.createElement('div')
-    particle.className = 'particle'
-    particle.style.left = Math.random() * 100 + '%'
-    particle.style.top = Math.random() * 100 + '%'
-    particle.style.width = Math.random() * 4 + 2 + 'px'
-    particle.style.height = particle.style.width
-    particle.style.animationDelay = Math.random() * 5 + 's'
-    particle.style.animationDuration = Math.random() * 3 + 3 + 's'
-    particlesRef.value.appendChild(particle)
-  }
-}
 
 // 主题切换
 function toggleTheme() {
@@ -219,112 +193,18 @@ async function handleLogin() {
 
 onMounted(() => {
   isDarkMode.value = localStorage.getItem('darkMode') === 'true'
-  generateParticles()
 })
 </script>
 
 <style scoped>
-.login-page {
+.manor-login {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
   position: relative;
   overflow: hidden;
   padding: 20px;
-}
-
-.dark-mode {
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
-}
-
-/* 动态背景 */
-.animated-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.4;
-  animation: float 20s infinite ease-in-out;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -200px;
-  left: -200px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: -150px;
-  right: -150px;
-  animation-delay: -7s;
-}
-
-.orb-3 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 50%;
-  left: 50%;
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(50px, -50px) scale(1.1); }
-  50% { transform: translate(-30px, 30px) scale(0.9); }
-  75% { transform: translate(30px, 50px) scale(1.05); }
-}
-
-.dark-mode .gradient-orb {
-  opacity: 0.15;
-}
-
-/* 粒子效果 */
-.particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.particle {
-  position: absolute;
-  background: rgba(102, 126, 234, 0.3);
-  border-radius: 50%;
-  animation: particle-float 5s infinite ease-in-out;
-}
-
-@keyframes particle-float {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: translateY(-100px) scale(0.5);
-    opacity: 0;
-  }
 }
 
 /* 主题切换 */
@@ -337,7 +217,7 @@ onMounted(() => {
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.9);
-  color: #4a5568;
+  color: #5a7c5a;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   display: flex;
@@ -348,9 +228,9 @@ onMounted(() => {
   z-index: 100;
 }
 
-.dark-mode .theme-toggle {
-  background: rgba(45, 45, 68, 0.9);
-  color: #e2e8f0;
+.night-mode .theme-toggle {
+  background: rgba(40, 45, 55, 0.9);
+  color: #8ab88a;
 }
 
 .theme-toggle:hover {
@@ -361,7 +241,7 @@ onMounted(() => {
 /* 登录容器 */
 .login-container {
   display: flex;
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 30px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -370,16 +250,18 @@ onMounted(() => {
   min-height: 600px;
   position: relative;
   z-index: 10;
+  border: 1px solid rgba(139, 188, 143, 0.2);
 }
 
-.dark-mode .login-container {
-  background: rgba(30, 30, 46, 0.95);
+.night-mode .login-container {
+  background: rgba(40, 45, 55, 0.95);
+  border-color: rgba(74, 124, 90, 0.2);
 }
 
 /* 左侧装饰 */
 .login-decoration {
   flex: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F 0%, #7CB87C 100%);
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -414,6 +296,7 @@ onMounted(() => {
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 10px;
+  font-family: 'Georgia', serif;
 }
 
 .decoration-subtitle {
@@ -495,21 +378,22 @@ onMounted(() => {
 .form-header h3 {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #1a202c;
+  color: #2d3748;
   margin-bottom: 8px;
+  font-family: 'Georgia', serif;
 }
 
-.dark-mode .form-header h3 {
-  color: #f7fafc;
+.night-mode .form-header h3 {
+  color: #e2e8f0;
 }
 
 .form-header p {
-  color: #718096;
+  color: #6a7c6a;
   font-size: 0.95rem;
 }
 
-.dark-mode .form-header p {
-  color: #a0aec0;
+.night-mode .form-header p {
+  color: #9ab89a;
 }
 
 /* 表单 */
@@ -534,12 +418,12 @@ onMounted(() => {
   color: #2d3748;
 }
 
-.dark-mode .input-label {
+.night-mode .input-label {
   color: #e2e8f0;
 }
 
 .input-label i {
-  color: #667eea;
+  color: #8FBC8F;
   font-size: 1rem;
 }
 
@@ -550,24 +434,24 @@ onMounted(() => {
 .form-input {
   width: 100%;
   padding: 14px 16px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid rgba(139, 188, 143, 0.3);
   border-radius: 12px;
   font-size: 0.95rem;
   color: #2d3748;
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
   transition: all 0.3s ease;
   outline: none;
 }
 
-.dark-mode .form-input {
-  background: rgba(45, 45, 68, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
+.night-mode .form-input {
+  background: rgba(40, 45, 55, 0.5);
+  border-color: rgba(74, 124, 90, 0.3);
   color: #e2e8f0;
 }
 
 .form-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #8FBC8F;
+  box-shadow: 0 0 0 4px rgba(139, 188, 143, 0.15);
 }
 
 .toggle-password {
@@ -577,14 +461,14 @@ onMounted(() => {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #a0aec0;
+  color: #8a9a8a;
   cursor: pointer;
   font-size: 1.1rem;
   transition: color 0.3s ease;
 }
 
 .toggle-password:hover {
-  color: #667eea;
+  color: #8FBC8F;
 }
 
 /* 表单选项 */
@@ -611,7 +495,7 @@ onMounted(() => {
 .checkmark {
   width: 20px;
   height: 20px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid rgba(139, 188, 143, 0.3);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -619,13 +503,13 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.dark-mode .checkmark {
-  border-color: rgba(255, 255, 255, 0.2);
+.night-mode .checkmark {
+  border-color: rgba(74, 124, 90, 0.3);
 }
 
 .remember-me input:checked + .checkmark {
-  background: #667eea;
-  border-color: #667eea;
+  background: #8FBC8F;
+  border-color: #8FBC8F;
 }
 
 .checkmark::after {
@@ -645,19 +529,19 @@ onMounted(() => {
 
 .label-text {
   font-size: 0.9rem;
-  color: #718096;
+  color: #6a7c6a;
 }
 
 .forgot-link {
   font-size: 0.9rem;
-  color: #667eea;
+  color: #8FBC8F;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .forgot-link:hover {
-  color: #764ba2;
+  color: #7CB87C;
 }
 
 /* 提交按钮 */
@@ -666,7 +550,7 @@ onMounted(() => {
   padding: 16px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8FBC8F 0%, #7CB87C 100%);
   color: white;
   font-size: 1rem;
   font-weight: 700;
@@ -676,12 +560,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(124, 184, 124, 0.4);
 }
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 8px 25px rgba(124, 184, 124, 0.5);
 }
 
 .submit-btn:disabled {
@@ -713,7 +597,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   margin: 30px 0;
-  color: #a0aec0;
+  color: #8a9a8a;
   font-size: 0.85rem;
 }
 
@@ -722,12 +606,12 @@ onMounted(() => {
   content: '';
   flex: 1;
   height: 1px;
-  background: #e2e8f0;
+  background: rgba(139, 188, 143, 0.2);
 }
 
-.dark-mode .divider::before,
-.dark-mode .divider::after {
-  background: rgba(255, 255, 255, 0.1);
+.night-mode .divider::before,
+.night-mode .divider::after {
+  background: rgba(74, 124, 90, 0.2);
 }
 
 .divider span {
@@ -746,9 +630,9 @@ onMounted(() => {
   width: 50px;
   height: 50px;
   border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  background: white;
-  color: #718096;
+  border: 2px solid rgba(139, 188, 143, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  color: #6a7c6a;
   font-size: 1.3rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -757,10 +641,10 @@ onMounted(() => {
   justify-content: center;
 }
 
-.dark-mode .social-btn {
-  background: rgba(45, 45, 68, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #a0aec0;
+.night-mode .social-btn {
+  background: rgba(40, 45, 55, 0.5);
+  border-color: rgba(74, 124, 90, 0.3);
+  color: #9ab89a;
 }
 
 .social-btn:hover {
@@ -786,12 +670,12 @@ onMounted(() => {
 /* 注册链接 */
 .register-link {
   text-align: center;
-  color: #718096;
+  color: #6a7c6a;
   font-size: 0.95rem;
 }
 
 .register-link .link {
-  color: #667eea;
+  color: #8FBC8F;
   text-decoration: none;
   font-weight: 700;
   margin-left: 6px;
@@ -799,7 +683,7 @@ onMounted(() => {
 }
 
 .register-link .link:hover {
-  color: #764ba2;
+  color: #7CB87C;
 }
 
 /* 页脚 */
@@ -809,12 +693,12 @@ onMounted(() => {
   left: 0;
   right: 0;
   text-align: center;
-  color: #a0aec0;
+  color: #8a9a8a;
   font-size: 0.85rem;
   z-index: 10;
 }
 
-.dark-mode .login-footer {
+.night-mode .login-footer {
   color: rgba(255, 255, 255, 0.4);
 }
 

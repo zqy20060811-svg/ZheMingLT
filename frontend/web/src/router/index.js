@@ -7,11 +7,12 @@ import CreatePostView from '@/views/CreatePostView.vue'
 import HotView from '@/views/HotView.vue'
 import CategoryView from '@/views/CategoryView.vue'
 import ProfileView from '@/views/ProfileView.vue'
+import UserProfileView from '@/views/UserProfileView.vue'
 import SearchView from '@/views/SearchView.vue'
 import NotificationView from '@/views/NotificationView.vue'
-import FollowListView from '@/views/FollowListView.vue'
-import EditPostView from '@/views/EditPostView.vue'
-import UserProfileView from '@/views/UserProfileView.vue'
+import MyPostsView from '@/views/MyPostsView.vue'
+import MyCollectionsView from '@/views/MyCollectionsView.vue'
+import TagsView from '@/views/TagsView.vue'
 
 // 获取AccessToken的辅助函数
 function getAccessToken() {
@@ -76,13 +77,13 @@ const routes = [
   {
     path: '/my-posts',
     name: 'my-posts',
-    component: HomeView,
+    component: MyPostsView,
     meta: { requiresAuth: true }
   },
   {
     path: '/my-collections',
     name: 'my-collections',
-    component: HomeView,
+    component: MyCollectionsView,
     meta: { requiresAuth: true }
   },
   {
@@ -103,27 +104,14 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/follows/:userId/following',
-    name: 'following',
-    component: FollowListView,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/follows/:userId/followers',
-    name: 'followers',
-    component: FollowListView,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/post/:id/edit',
-    name: 'edit-post',
-    component: EditPostView,
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/user/:id',
     name: 'user-profile',
     component: UserProfileView
+  },
+  {
+    path: '/tags',
+    name: 'tags',
+    component: TagsView
   }
 ]
 

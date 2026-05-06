@@ -36,7 +36,7 @@ const navItems = [
   { name: 'home', path: '/', label: '首页', icon: 'bi bi-house-door' },
   { name: 'hot', path: '/hot', label: '热门', icon: 'bi bi-fire' },
   { name: 'category', path: '/category', label: '分类', icon: 'bi bi-grid' },
-  { name: 'notifications', path: '/notifications', label: '消息', icon: 'bi bi-bell' },
+  { name: 'tags', path: '/tags', label: '标签', icon: 'bi bi-tags' },
   { name: 'profile', path: '/profile', label: '我的', icon: 'bi bi-person' }
 ]
 

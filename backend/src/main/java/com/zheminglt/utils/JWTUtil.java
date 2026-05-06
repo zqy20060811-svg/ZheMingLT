@@ -154,6 +154,37 @@ public class JWTUtil {
         }
     }
 
+    /**
+     * 获取 AccessToken 剩余过期时间（毫秒）
+     */
+    public static long getAccessTokenExpireTime(String token) {
+        try {
+            Date expiration = getExpirationDateFromAccessToken(token);
+            long remainingTime = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remainingTime);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 获取 RefreshToken 剩余过期时间（毫秒）
+     */
+    public static long getRefreshTokenExpireTime(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getRefreshSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            Date expiration = claims.getExpiration();
+            long remainingTime = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remainingTime);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     // ==================== 兼容旧版方法（已废弃） ====================
 
     @Deprecated

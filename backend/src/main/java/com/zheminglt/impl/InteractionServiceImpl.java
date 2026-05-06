@@ -6,6 +6,7 @@ import com.zheminglt.mapper.*;
 import com.zheminglt.model.*;
 import com.zheminglt.service.InteractionService;
 import com.zheminglt.service.NotificationService;
+import com.zheminglt.utils.RedisCacheUtil;
 import com.zheminglt.vo.ResponseVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,9 @@ public class InteractionServiceImpl implements InteractionService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private RedisCacheUtil redisCacheUtil;
+
     @Override
     @Transactional
     public ResponseVO<Void> likePost(Long userId, Long postId) {
@@ -54,9 +58,16 @@ public class InteractionServiceImpl implements InteractionService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
         }
 
-        // 检查是否已经点赞
+        // 先检查 Redis 缓存
+        if (redisCacheUtil.hasLiked(postId, userId)) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.ALREADY_LIKED);
+        }
+
+        // 检查数据库
         Optional<Like> existingLike = likeMapper.findByUserIdAndPostId(userId, postId);
         if (existingLike.isPresent()) {
+            // 同步到 Redis
+            redisCacheUtil.addLike(postId, userId);
             return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.ALREADY_LIKED);
         }
 
@@ -65,6 +76,9 @@ public class InteractionServiceImpl implements InteractionService {
         like.setUser(user);
         like.setPost(post);
         likeMapper.save(like);
+
+        // 更新 Redis 缓存
+        redisCacheUtil.addLike(postId, userId);
 
         // 更新帖子点赞数
         post.setLikeCount(post.getLikeCount() + 1);
@@ -87,14 +101,22 @@ public class InteractionServiceImpl implements InteractionService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
 
+        // 先检查 Redis 缓存
+        boolean hasLiked = redisCacheUtil.hasLiked(postId, userId);
+
         // 查找点赞记录
         Optional<Like> existingLike = likeMapper.findByUserIdAndPostId(userId, postId);
-        if (!existingLike.isPresent()) {
+        if (!existingLike.isPresent() && !hasLiked) {
             return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.NOT_LIKED);
         }
 
-        // 删除点赞记录
-        likeMapper.delete(existingLike.get());
+        // 删除数据库记录
+        if (existingLike.isPresent()) {
+            likeMapper.delete(existingLike.get());
+        }
+
+        // 更新 Redis 缓存
+        redisCacheUtil.removeLike(postId, userId);
 
         // 更新帖子点赞数
         if (post.getLikeCount() > 0) {
@@ -107,7 +129,17 @@ public class InteractionServiceImpl implements InteractionService {
 
     @Override
     public ResponseVO<Boolean> isPostLiked(Long userId, Long postId) {
+        // 先检查 Redis
+        if (redisCacheUtil.hasLiked(postId, userId)) {
+            return ResponseVO.success(true);
+        }
+
+        // 再检查数据库
         Optional<Like> like = likeMapper.findByUserIdAndPostId(userId, postId);
+        if (like.isPresent()) {
+            // 同步到 Redis
+            redisCacheUtil.addLike(postId, userId);
+        }
         return ResponseVO.success(like.isPresent());
     }
 
@@ -175,9 +207,16 @@ public class InteractionServiceImpl implements InteractionService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
         }
 
-        // 检查是否已经收藏
+        // 先检查 Redis 缓存
+        if (redisCacheUtil.hasCollected(postId, userId)) {
+            return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.ALREADY_COLLECTED);
+        }
+
+        // 检查数据库
         Optional<Collection> existingCollection = collectionMapper.findByUserIdAndPostId(userId, postId);
         if (existingCollection.isPresent()) {
+            // 同步到 Redis
+            redisCacheUtil.addCollect(postId, userId);
             return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.ALREADY_COLLECTED);
         }
 
@@ -187,27 +226,59 @@ public class InteractionServiceImpl implements InteractionService {
         collection.setPost(post);
         collectionMapper.save(collection);
 
+        // 更新 Redis 缓存
+        redisCacheUtil.addCollect(postId, userId);
+
+        // 更新帖子收藏数量
+        post.setCollectCount((post.getCollectCount() != null ? post.getCollectCount() : 0) + 1);
+        postMapper.save(post);
+
         return ResponseVO.success(null);
     }
 
     @Override
     @Transactional
     public ResponseVO<Void> uncollectPost(Long userId, Long postId) {
+        // 先检查 Redis 缓存
+        boolean hasCollected = redisCacheUtil.hasCollected(postId, userId);
+
         // 查找收藏记录
         Optional<Collection> existingCollection = collectionMapper.findByUserIdAndPostId(userId, postId);
-        if (!existingCollection.isPresent()) {
+        if (!existingCollection.isPresent() && !hasCollected) {
             return ResponseVO.error(ErrorCodeConstant.HTTP_BAD_REQUEST, MessageConstant.NOT_COLLECTED);
         }
 
-        // 删除收藏记录
-        collectionMapper.delete(existingCollection.get());
+        // 删除数据库记录
+        if (existingCollection.isPresent()) {
+            collectionMapper.delete(existingCollection.get());
+        }
+
+        // 更新 Redis 缓存
+        redisCacheUtil.removeCollect(postId, userId);
+
+        // 更新帖子收藏数量
+        Post post = postMapper.findById(postId).orElse(null);
+        if (post != null && post.getCollectCount() != null && post.getCollectCount() > 0) {
+            post.setCollectCount(post.getCollectCount() - 1);
+            postMapper.save(post);
+        }
 
         return ResponseVO.success(null);
     }
 
     @Override
     public ResponseVO<Boolean> isPostCollected(Long userId, Long postId) {
+        // 先检查 Redis
+        if (redisCacheUtil.hasCollected(postId, userId)) {
+            return ResponseVO.success(true);
+        }
+
+        // 再检查数据库
         Optional<Collection> collection = collectionMapper.findByUserIdAndPostId(userId, postId);
+        if (collection.isPresent()) {
+            // 同步到 Redis
+            redisCacheUtil.addCollect(postId, userId);
+        }
         return ResponseVO.success(collection.isPresent());
     }
 

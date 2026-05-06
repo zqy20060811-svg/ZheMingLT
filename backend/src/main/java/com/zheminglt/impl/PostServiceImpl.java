@@ -3,9 +3,8 @@ package com.zheminglt.impl;
 import com.zheminglt.constant.BusinessConstant;
 import com.zheminglt.constant.ErrorCodeConstant;
 import com.zheminglt.constant.MessageConstant;
-import com.zheminglt.mapper.CategoryMapper;
+import com.zheminglt.constant.RedisKeyConstant;
 import com.zheminglt.mapper.PostMapper;
-import com.zheminglt.mapper.UserMapper;
 import com.zheminglt.model.Category;
 import com.zheminglt.model.Post;
 import com.zheminglt.model.User;
@@ -14,9 +13,12 @@ import com.zheminglt.vo.PostVO;
 import com.zheminglt.vo.ResponseVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,10 +28,22 @@ public class PostServiceImpl implements PostService {
     private PostMapper postMapper;
 
     @Autowired
-    private UserMapper userMapper;
+    private StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private CategoryMapper categoryMapper;
+    /**
+     * 清除用户帖子缓存
+     */
+    private void clearUserPostsCache(Long userId) {
+        try {
+            String pattern = RedisKeyConstant.USER_POSTS + userId + ":*";
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            System.err.println("清除用户帖子缓存失败: " + e.getMessage());
+        }
+    }
 
     @Override
     public ResponseVO<List<PostVO>> findAll() {
@@ -56,6 +70,7 @@ public class PostServiceImpl implements PostService {
         if (post.getUser() != null) {
             postVO.setUserId(post.getUser().getId());
             postVO.setAuthorName(post.getUser().getUsername());
+            postVO.setAuthorAvatar(post.getUser().getAvatar());
         }
         if (post.getCategory() != null) {
             postVO.setCategoryName(post.getCategory().getName());
@@ -92,6 +107,12 @@ public class PostServiceImpl implements PostService {
                 post.setCommentCount(0);
             }
             Post savedPost = postMapper.save(post);
+            
+            // 清除该用户的帖子缓存
+            if (savedPost.getUser() != null) {
+                clearUserPostsCache(savedPost.getUser().getId());
+            }
+            
             PostVO postVO = new PostVO();
             BeanUtils.copyProperties(savedPost, postVO);
             // 手动设置作者名称和分类名称
@@ -109,44 +130,45 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public ResponseVO<PostVO> update(Long id, Post post, Long userId) {
+    public ResponseVO<PostVO> update(Long id, Post post) {
         Post existingPost = postMapper.findById(id).orElse(null);
         if (existingPost == null) {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
-
-        // 检查是否是帖子作者或管理员
-        User user = userMapper.findById(userId).orElse(null);
-        if (user == null) {
-            return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.USER_NOT_FOUND);
-        }
-
-        boolean isAuthor = existingPost.getUser() != null && existingPost.getUser().getId().equals(userId);
-        boolean isAdmin = user.getRole() != null && user.getRole() == BusinessConstant.ROLE_ADMIN;
-
-        if (!isAuthor && !isAdmin) {
-            return ResponseVO.error(ErrorCodeConstant.CODE_FORBIDDEN, MessageConstant.FORBIDDEN);
-        }
-
-        // 只更新允许更新的字段
-        if (post.getTitle() != null) {
-            existingPost.setTitle(post.getTitle());
-        }
-        if (post.getContent() != null) {
-            existingPost.setContent(post.getContent());
-        }
-        if (post.getSummary() != null) {
-            existingPost.setSummary(post.getSummary());
-        }
-        if (post.getCategory() != null && post.getCategory().getId() != null) {
-            Category category = categoryMapper.findById(post.getCategory().getId()).orElse(null);
-            if (category != null) {
-                existingPost.setCategory(category);
-            }
-        }
-
+        // 保存原有的ID、用户、分类和计数器信息
+        Long existingId = existingPost.getId();
+        User existingUser = existingPost.getUser();
+        Category existingCategory = existingPost.getCategory();
+        Integer viewCount = existingPost.getViewCount();
+        Integer likeCount = existingPost.getLikeCount();
+        Integer commentCount = existingPost.getCommentCount();
+        Integer collectCount = existingPost.getCollectCount();
+        Integer status = existingPost.getStatus();
+        Date createdAt = existingPost.getCreatedAt();
+        
+        // 复制属性，但保留原有信息
+        BeanUtils.copyProperties(post, existingPost);
+        
+        // 恢复ID、用户、分类和计数器信息
+        existingPost.setId(existingId);
+        existingPost.setUser(existingUser);
+        existingPost.setCategory(existingCategory);
+        existingPost.setViewCount(viewCount);
+        existingPost.setLikeCount(likeCount);
+        existingPost.setCommentCount(commentCount);
+        existingPost.setCollectCount(collectCount);
+        existingPost.setStatus(status);
+        existingPost.setCreatedAt(createdAt);
+        
         Post savedPost = postMapper.save(existingPost);
-        PostVO postVO = convertToVO(savedPost);
+        
+        // 清除该用户的帖子缓存
+        if (savedPost.getUser() != null) {
+            clearUserPostsCache(savedPost.getUser().getId());
+        }
+        
+        PostVO postVO = new PostVO();
+        BeanUtils.copyProperties(savedPost, postVO);
         return ResponseVO.success(postVO);
     }
 
@@ -156,7 +178,17 @@ public class PostServiceImpl implements PostService {
         if (post == null) {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
+        
+        // 获取用户ID用于清除缓存
+        Long userId = post.getUser() != null ? post.getUser().getId() : null;
+        
         postMapper.delete(post);
+        
+        // 清除该用户的帖子缓存
+        if (userId != null) {
+            clearUserPostsCache(userId);
+        }
+        
         return ResponseVO.success(null);
     }
 

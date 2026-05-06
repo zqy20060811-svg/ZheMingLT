@@ -25,4 +25,18 @@ public class RedisKeyConstant {
 
     // 防止重复计算锁前缀
     public static final String HOT_POSTS_LOCK = "hot:posts:lock:";
+
+    // 用户帖子列表缓存前缀
+    public static final String USER_POSTS = "user:posts:";
+
+    // 点赞相关 Key
+    public static final String POST_LIKE_SET = "post:like:";
+    public static final String POST_LIKE_COUNT = "post:like:count:";
+
+    // 收藏相关 Key
+    public static final String POST_COLLECT_SET = "post:collect:";
+    public static final String POST_COLLECT_COUNT = "post:collect:count:";
+
+    // 用户帖子列表缓存过期时间（分钟）
+    public static final long USER_POSTS_EXPIRE = 10;
 }

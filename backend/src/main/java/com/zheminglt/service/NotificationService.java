@@ -27,6 +27,9 @@ public interface NotificationService {
     // 创建点赞通知
     void createLikeNotification(Long postId, Long fromUserId, Long toUserId);
 
+    // 创建关注通知
+    void createFollowNotification(Long fromUserId, Long toUserId);
+
     // 创建系统通知
     void createSystemNotification(Long userId, String title, String content);
 }

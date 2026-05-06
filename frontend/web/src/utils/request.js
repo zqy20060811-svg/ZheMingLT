@@ -201,6 +201,43 @@ export function del(url) {
   return request(url, { method: 'DELETE' })
 }
 
+// 文件上传请求
+export async function upload(url, formData) {
+  let accessToken = getAccessToken()
+  
+  const headers = {}
+  
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}${url}`, {
+      method: 'POST',
+      headers,
+      body: formData
+    })
+    
+    const data = await response.json()
+    
+    // 处理401未授权
+    if (data.code === 401 || data.code === 401001 || data.code === 401002 || data.code === 401003) {
+      clearTokens()
+      window.location.href = '/login'
+      return data
+    }
+    
+    return data
+  } catch (error) {
+    console.error('上传失败:', error)
+    return {
+      code: 500,
+      message: '文件上传失败',
+      data: null
+    }
+  }
+}
+
 // 导出Token管理方法
 export { 
   getAccessToken, 

@@ -55,6 +55,9 @@ public class CommentServiceImpl implements CommentService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
         comment.setPost(post);
+        
+        // 设置默认状态
+        comment.setStatus(1);
 
         Comment savedComment = commentMapper.save(comment);
 
@@ -166,9 +169,11 @@ public class CommentServiceImpl implements CommentService {
             vo.setParentId(comment.getParent().getId());
         }
 
-        // 设置作者名称
+        // 设置作者信息
         if (comment.getUser() != null) {
+            vo.setAuthorId(comment.getUser().getId());
             vo.setAuthorName(comment.getUser().getUsername());
+            vo.setAuthorAvatar(comment.getUser().getAvatar());
         }
 
         return vo;

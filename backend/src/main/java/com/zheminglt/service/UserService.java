@@ -16,11 +16,11 @@ public interface UserService {
     ResponseVO<LoginVO> login(LoginDTO loginDTO);
     ResponseVO<String> logout(String token);
     ResponseVO<UserVO> getUserInfo(Long userId);
+    ResponseVO<UserVO> getUserById(Long userId);
     ResponseVO<UserVO> updateUserInfo(Long userId, UserDTO userDTO);
     ResponseVO<UserStatsVO> getUserStats(Long userId);
-
-    // 根据ID获取用户信息
-    ResponseVO<UserVO> getUserById(Long userId);
+    ResponseVO<UserVO> updateAvatar(Long userId, String avatarUrl);
+    ResponseVO<UserVO> updateUsername(Long userId, String newUsername);
 
     // 用户互动相关
     ResponseVO<PageVO<UserLikeVO>> getUserLikes(Long userId, int page, int size);
