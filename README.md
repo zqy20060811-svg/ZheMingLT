@@ -1,12 +1,11 @@
 # 择明论坛 (ZheMing Forum)
 
-一个基于 Spring Boot + Vue3 + 微信小程序的现代化论坛系统，集成 DeepSeek AI 智能助手。
+一个基于 Spring Boot + Vue3 的现代化论坛系统，集成 DeepSeek AI 智能助手。
 
 ## ✨ 核心特性
 
 - 🤖 **AI 智能助手** - 集成 DeepSeek API，提供智能回复建议、内容总结、标签推荐、敏感内容检测
 - 🎨 **庄园风格主题** - 优雅的庄园风格 UI 设计，支持日间/夜间模式
-- 📱 **多端支持** - Web 端 + 微信小程序，随时随地参与讨论
 - 🔐 **安全可靠** - JWT 认证 + SHA-256 加盐密码加密
 - 🚀 **高性能** - Redis 缓存 + 数据库优化
 - 📊 **实时通知** - 消息推送系统，不错过任何互动
@@ -32,7 +31,6 @@
 | Vite | 5.x | 构建工具 |
 | Vue Router | 4.x | 路由管理 |
 | Bootstrap Icons | 1.11.x | 图标库 |
-| 微信小程序 | - | 移动端 |
 
 ## 🚀 快速开始
 
@@ -99,17 +97,18 @@ zhemingluntan/
 │   └── src/main/resources/
 │       └── application.properties
 ├── frontend/
-│   ├── web/                    # Vue3 Web 前端
-│   │   ├── src/
-│   │   │   ├── views/          # 页面组件
-│   │   │   ├── components/     # 公共组件
-│   │   │   ├── services/       # API 服务
-│   │   │   └── router/         # 路由配置
-│   │   └── package.json
-│   └── wechat/                 # 微信小程序
+│   └── web/                    # Vue3 Web 前端
+│       ├── src/
+│       │   ├── views/          # 页面组件
+│       │   ├── components/     # 公共组件
+│       │   ├── services/       # API 服务
+│       │   └── router/         # 路由配置
+│       └── package.json
 ├── docs/                       # 项目文档
 │   ├── API.md                  # API 接口文档
 │   ├── DATABASE.md             # 数据库设计
+│   ├── PROJECT_STRUCTURE.md    # 项目结构说明
+│   ├── REDIS.md                # Redis 使用说明
 │   └── sql/                    # SQL 脚本
 └── README.md
 ```
@@ -156,6 +155,8 @@ zhemingluntan/
 - [API 接口文档](docs/API.md)
 - [数据库设计](docs/DATABASE.md)
 - [项目结构说明](docs/PROJECT_STRUCTURE.md)
+- [Redis 使用说明](docs/REDIS.md)
+- [部署指南](部署指南.md)
 
 ## 🔒 安全配置
 
