@@ -44,26 +44,13 @@ public class CommentController {
     @PostMapping
     public ResponseVO<CommentVO> createComment(HttpServletRequest request,
                                                @RequestBody CommentDTO commentDTO) {
-        System.out.println("【评论接口】收到评论请求");
-        System.out.println("【评论接口】postId=" + commentDTO.getPostId() + ", content=" + commentDTO.getContent());
-        
         Long userId = getUserIdFromRequest(request);
-        System.out.println("【评论接口】解析userId=" + userId);
         
         if (userId == null) {
-            System.out.println("【评论接口】userId为空，返回未授权");
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_EMPTY);
         }
         
-        try {
-            ResponseVO<CommentVO> result = commentService.createComment(userId, commentDTO);
-            System.out.println("【评论接口】评论创建成功");
-            return result;
-        } catch (Exception e) {
-            System.out.println("【评论接口】评论创建失败: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
-        }
+        return commentService.createComment(userId, commentDTO);
     }
 
     @Operation(summary = "获取帖子评论", description = "分页获取指定帖子的所有评论")

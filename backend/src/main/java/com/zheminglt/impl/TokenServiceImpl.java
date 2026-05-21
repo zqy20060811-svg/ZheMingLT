@@ -40,13 +40,11 @@ public class TokenServiceImpl implements TokenService {
     public boolean isAccessTokenValid(String token) {
         // 先检查是否在黑名单中
         if (isAccessTokenBlacklisted(token)) {
-            System.out.println("Token在黑名单中: " + token.substring(0, 20) + "...");
             return false;
         }
         // 再检查token是否存在且JWT有效
         String key = ACCESS_TOKEN_PREFIX + token;
         boolean exists = Boolean.TRUE.equals(redisTemplate.hasKey(key));
-        System.out.println("Token是否存在: " + exists + ", key: " + key.substring(0, 30) + "...");
         if (!exists) {
             return false;
         }

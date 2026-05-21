@@ -14,8 +14,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        System.out.println("========== WebConfig.addInterceptors 被调用 ==========");
-        System.out.println("JWTInterceptor is null: " + (jwtInterceptor == null));
         registry.addInterceptor(jwtInterceptor)
                 // 拦截所有路径（context-path已经是/api，所以这里用/**）
                 .addPathPatterns("/**")

@@ -119,51 +119,36 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseVO<LoginVO> login(LoginDTO loginDTO) {
-        System.out.println("登录请求: username=" + loginDTO.getUsername());
-
         if (loginDTO.getUsername() == null || loginDTO.getPassword() == null) {
-            System.out.println("用户名或密码为空");
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
 
         User user = userMapper.findByUsername(loginDTO.getUsername());
         if (user == null) {
-            System.out.println("用户不存在: " + loginDTO.getUsername());
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
-
-        System.out.println("找到用户: " + user.getUsername());
 
         // 验证密码
         boolean passwordValid = false;
         String storedPassword = user.getPassword();
-        System.out.println("存储的密码: " + storedPassword);
-        System.out.println("输入的密码: " + loginDTO.getPassword());
 
         boolean isOldFormat = PasswordMigrationUtil.isOldPasswordFormat(storedPassword);
-        System.out.println("是否是旧格式: " + isOldFormat);
 
         if (isOldFormat) {
             // 旧格式：明文直接比较
             passwordValid = loginDTO.getPassword().equals(storedPassword);
-            System.out.println("明文比较结果: " + passwordValid);
             if (passwordValid) {
                 // 登录成功，自动迁移密码为新格式
-                System.out.println("检测到旧密码格式，自动迁移中...");
                 String newPassword = PasswordUtil.encryptPassword(loginDTO.getPassword());
-                System.out.println("新密码: " + newPassword);
                 user.setPassword(newPassword);
-                User savedUser = userMapper.save(user);
-                System.out.println("密码迁移完成，新存储的密码: " + savedUser.getPassword());
+                userMapper.save(user);
             }
         } else {
             // 新格式：SHA-256加盐验证
             passwordValid = PasswordUtil.verifyPassword(loginDTO.getPassword(), storedPassword);
-            System.out.println("SHA-256验证结果: " + passwordValid);
         }
 
         if (!passwordValid) {
-            System.out.println("密码不匹配");
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
 
@@ -171,12 +156,10 @@ public class UserServiceImpl implements UserService {
             // 生成双Token
             String accessToken = com.zheminglt.utils.JWTUtil.generateAccessToken(user.getId());
             String refreshToken = com.zheminglt.utils.JWTUtil.generateRefreshToken(user.getId());
-            System.out.println("生成双token成功");
 
             // 将双Token存入存储
             tokenService.storeAccessToken(accessToken, user.getId());
             tokenService.storeRefreshToken(refreshToken, user.getId());
-            System.out.println("存储token成功");
 
             // 创建登录VO
             LoginVO loginVO = new LoginVO();
@@ -190,12 +173,9 @@ public class UserServiceImpl implements UserService {
             UserVO userVO = new UserVO();
             BeanUtils.copyProperties(user, userVO);
             loginVO.setUser(userVO);
-            System.out.println("登录成功");
 
             return ResponseVO.success(loginVO);
         } catch (Exception e) {
-            System.out.println("登录异常: " + e.getMessage());
-            e.printStackTrace();
             return ResponseVO.error(ErrorCodeConstant.CODE_ERROR, "登录处理失败");
         }
     }

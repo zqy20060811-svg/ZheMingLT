@@ -157,7 +157,7 @@ async function request(url, options = {}) {
       // 在后台静默刷新Token
       refreshAccessToken().then(newAccessToken => {
         if (newAccessToken) {
-          console.log('Token已自动刷新')
+          // Token刷新成功
         }
       })
     }

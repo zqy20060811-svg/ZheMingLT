@@ -167,12 +167,10 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    console.log('登录请求:', { username: form.username, password: form.password })
     const res = await post('/users/login', {
       username: form.username,
       password: form.password
     })
-    console.log('登录响应:', res)
 
     if (res.code === 200) {
       // 存储双Token

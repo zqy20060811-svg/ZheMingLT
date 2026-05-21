@@ -192,7 +192,6 @@ function checkLogin() {
 
 async function loadUserData() {
   const userId = route.params.id
-  console.log('Loading user data for ID:', userId)
   if (!userId) {
     loading.value = false
     return
@@ -201,7 +200,6 @@ async function loadUserData() {
   try {
     // 获取用户信息
     const userRes = await get(`/users/${userId}`)
-    console.log('User response:', userRes)
     if (userRes.code === 200) {
       user.value = userRes.data
     } else {
@@ -212,7 +210,6 @@ async function loadUserData() {
 
     // 获取用户统计
     const statsRes = await get(`/users/${userId}/stats`)
-    console.log('Stats response:', statsRes)
     if (statsRes.code === 200) {
       stats.value = statsRes.data
     }
@@ -228,7 +225,6 @@ async function loadUserData() {
     // 检查是否已关注（如果已登录且不是查看自己）
     if (isLoggedIn.value && !isCurrentUser.value) {
       const followRes = await get(`/follows/check/${userId}`)
-      console.log('Follow check response:', followRes)
       if (followRes.code === 200) {
         isFollowing.value = followRes.data
       }

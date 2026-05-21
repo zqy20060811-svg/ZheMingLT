@@ -153,7 +153,6 @@ public class PostController {
             @Parameter(description = "帖子ID") @PathVariable Long id,
             HttpServletRequest request) {
         Long userId = getUserIdFromRequest(request);
-        System.out.println("获取帖子详情, ID=" + id + ", userId=" + userId);
         ResponseVO<PostVO> response = postService.findById(id);
         
         if (response.getData() != null) {
@@ -166,12 +165,9 @@ public class PostController {
             
             // 如果用户已登录，检查是否已点赞和收藏
             if (userId != null) {
-                System.out.println("用户已登录, 检查互动状态");
-                
                 // 检查是否已点赞
                 try {
                     ResponseVO<Boolean> likeResponse = interactionService.isPostLiked(userId, id);
-                    System.out.println("点赞状态: " + likeResponse.getData());
                     if (likeResponse.getData() != null) {
                         postVO.setIsLiked(likeResponse.getData());
                     }
@@ -182,7 +178,6 @@ public class PostController {
                 // 检查是否已收藏
                 try {
                     ResponseVO<Boolean> collectResponse = interactionService.isPostCollected(userId, id);
-                    System.out.println("收藏状态: " + collectResponse.getData());
                     if (collectResponse.getData() != null) {
                         postVO.setIsCollected(collectResponse.getData());
                     }
@@ -194,7 +189,6 @@ public class PostController {
                 if (postVO.getUserId() != null) {
                     try {
                         ResponseVO<Boolean> followResponse = followService.isFollowing(userId, postVO.getUserId());
-                        System.out.println("关注状态: " + followResponse.getData());
                         if (followResponse.getData() != null) {
                             postVO.setIsFollowing(followResponse.getData());
                         }
@@ -203,9 +197,6 @@ public class PostController {
                     }
                 }
                 
-                System.out.println("最终状态 - isLiked=" + postVO.getIsLiked() + ", isCollected=" + postVO.getIsCollected() + ", isFollowing=" + postVO.getIsFollowing());
-            } else {
-                System.out.println("用户未登录, 跳过互动状态检查");
             }
         }
         
@@ -217,13 +208,10 @@ public class PostController {
     @PostMapping
     public ResponseVO<PostVO> createPost(HttpServletRequest request,
                                          @RequestBody com.zheminglt.dto.PostDTO postDTO) {
-        System.out.println("========== PostController.createPost 被调用 ==========");
         Long userId = (Long) request.getAttribute("userId");
-        System.out.println("userId: " + userId);
         
         // 检查userId是否为null
         if (userId == null) {
-            System.out.println("PostController.createPost - userId为null，返回未授权错误");
             return ResponseVO.error(401, "请先登录");
         }
         
