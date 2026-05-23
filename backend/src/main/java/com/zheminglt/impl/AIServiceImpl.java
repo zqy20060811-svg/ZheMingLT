@@ -72,7 +72,6 @@ public class AIServiceImpl implements AIService {
             }
             return null;
         } catch (Exception e) {
-            System.err.println("DeepSeek API 调用失败: " + e.getMessage());
             return null;
         }
     }

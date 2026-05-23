@@ -18,12 +18,12 @@ public class WebConfig implements WebMvcConfigurer {
                 // 拦截所有路径（context-path已经是/api，所以这里用/**）
                 .addPathPatterns("/**")
                 // 不需要拦截的公开接口
-                .excludePathPatterns("/users/login", "/users/register", "/users/refresh")
-                .excludePathPatterns("/posts", "/posts/hot", "/posts/{id:[\\d+]}", "/posts/user/{userId:[\\d+]}")
-                .excludePathPatterns("/categories", "/categories/**")
-                .excludePathPatterns("/comments/post/{postId:[\\d+]}")
-                .excludePathPatterns("/follows/{userId:[\\d+]}/following/count", "/follows/{userId:[\\d+]}/followers/count")
-                .excludePathPatterns("/users/{userId:[\\d+]}", "/users/{userId:[\\d+]}/stats", "/users/{userId:[\\d+]}/posts")
+                .excludePathPatterns("/api/users/login", "/api/users/register", "/api/users/refresh")
+                .excludePathPatterns("/api/posts/{id:[\\d+]}", "/api/posts/user/{userId:[\\d+]}")
+                .excludePathPatterns("/api/categories", "/api/categories/**")
+                .excludePathPatterns("/api/comments/post/{postId:[\\d+]}")
+                .excludePathPatterns("/api/follows/{userId:[\\d+]}/following/count", "/api/follows/{userId:[\\d+]}/followers/count")
+                .excludePathPatterns("/api/users/{userId:[\\d+]}", "/api/users/{userId:[\\d+]}/stats", "/api/users/{userId:[\\d+]}/posts")
                 .excludePathPatterns("/swagger-ui/**", "/v3/api-docs/**");
     }
 }

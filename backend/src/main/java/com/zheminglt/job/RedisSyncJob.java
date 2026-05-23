@@ -49,7 +49,7 @@ public class RedisSyncJob {
                 // 同步到数据库
                 likeService.syncLikesToDatabase(postId);
             } catch (Exception e) {
-                System.err.println("同步点赞数据失败: " + key + ", 错误: " + e.getMessage());
+                // 同步失败，继续处理下一个
             }
         }
     }
@@ -73,7 +73,7 @@ public class RedisSyncJob {
                 // 同步到数据库
                 collectionService.syncCollectsToDatabase(postId);
             } catch (Exception e) {
-                System.err.println("同步收藏数据失败: " + key + ", 错误: " + e.getMessage());
+                // 同步失败，继续处理下一个
             }
         }
     }

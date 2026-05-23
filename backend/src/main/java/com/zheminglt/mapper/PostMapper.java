@@ -15,6 +15,7 @@ public interface PostMapper extends JpaRepository<Post, Long> {
     Page<Post> findByCategoryId(Long categoryId, Pageable pageable);
     Page<Post> findByUserId(Long userId, Pageable pageable);
     long countByUserId(Long userId);
+    long countByCategoryId(Long categoryId);
 
     // 基础热度排序（总榜）
     @Query("SELECT p FROM Post p ORDER BY (p.viewCount * 1 + p.likeCount * 3 + p.commentCount * 5) DESC")

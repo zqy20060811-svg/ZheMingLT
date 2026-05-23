@@ -8,4 +8,5 @@ public class CategoryVO {
     private String name;
     private String description;
     private Integer sort;
+    private Long postCount;
 }

@@ -172,7 +172,7 @@ public class PostController {
                         postVO.setIsLiked(likeResponse.getData());
                     }
                 } catch (Exception e) {
-                    System.err.println("检查点赞状态失败: " + e.getMessage());
+                    // 忽略点赞状态检查异常
                 }
                 
                 // 检查是否已收藏
@@ -182,7 +182,7 @@ public class PostController {
                         postVO.setIsCollected(collectResponse.getData());
                     }
                 } catch (Exception e) {
-                    System.err.println("检查收藏状态失败: " + e.getMessage());
+                    // 忽略收藏状态检查异常
                 }
                 
                 // 检查是否已关注作者
@@ -193,7 +193,7 @@ public class PostController {
                             postVO.setIsFollowing(followResponse.getData());
                         }
                     } catch (Exception e) {
-                        System.err.println("检查关注状态失败: " + e.getMessage());
+                        // 忽略关注状态检查异常
                     }
                 }
                 

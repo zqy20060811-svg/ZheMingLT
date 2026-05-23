@@ -14,6 +14,7 @@ import com.zheminglt.mapper.LikeMapper;
 import com.zheminglt.mapper.CollectionMapper;
 import com.zheminglt.mapper.CommentMapper;
 import com.zheminglt.mapper.CategoryMapper;
+import com.zheminglt.mapper.FollowMapper;
 import com.zheminglt.model.User;
 import com.zheminglt.model.Post;
 import com.zheminglt.model.Like;
@@ -22,7 +23,6 @@ import com.zheminglt.model.Comment;
 import com.zheminglt.model.Category;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.service.UserService;
-import com.zheminglt.utils.PasswordMigrationUtil;
 import com.zheminglt.utils.PasswordUtil;
 import com.zheminglt.vo.LoginVO;
 import com.zheminglt.vo.UserVO;
@@ -70,6 +70,9 @@ public class UserServiceImpl implements UserService {
     private CategoryMapper categoryMapper;
 
     @Autowired
+    private FollowMapper followMapper;
+
+    @Autowired
     private StringRedisTemplate redisTemplate;
 
     @Autowired
@@ -80,6 +83,14 @@ public class UserServiceImpl implements UserService {
         // 检查用户名是否已存在
         if (userMapper.findByUsername(userDTO.getUsername()) != null) {
             return ResponseVO.error(ErrorCodeConstant.CODE_CONFLICT, MessageConstant.USERNAME_ALREADY_EXISTS);
+        }
+
+        // 将空字符串转为null，避免数据库唯一约束冲突
+        if (userDTO.getEmail() != null && userDTO.getEmail().isEmpty()) {
+            userDTO.setEmail(null);
+        }
+        if (userDTO.getPhone() != null && userDTO.getPhone().isEmpty()) {
+            userDTO.setPhone(null);
         }
 
         // 检查邮箱是否已存在
@@ -128,27 +139,8 @@ public class UserServiceImpl implements UserService {
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
 
-        // 验证密码
-        boolean passwordValid = false;
-        String storedPassword = user.getPassword();
-
-        boolean isOldFormat = PasswordMigrationUtil.isOldPasswordFormat(storedPassword);
-
-        if (isOldFormat) {
-            // 旧格式：明文直接比较
-            passwordValid = loginDTO.getPassword().equals(storedPassword);
-            if (passwordValid) {
-                // 登录成功，自动迁移密码为新格式
-                String newPassword = PasswordUtil.encryptPassword(loginDTO.getPassword());
-                user.setPassword(newPassword);
-                userMapper.save(user);
-            }
-        } else {
-            // 新格式：SHA-256加盐验证
-            passwordValid = PasswordUtil.verifyPassword(loginDTO.getPassword(), storedPassword);
-        }
-
-        if (!passwordValid) {
+        // 验证密码（SHA-256加盐）
+        if (!PasswordUtil.verifyPassword(loginDTO.getPassword(), user.getPassword())) {
             return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.USERNAME_OR_PASSWORD_ERROR);
         }
 
@@ -258,9 +250,11 @@ public class UserServiceImpl implements UserService {
                 .sum();
         statsVO.setLikes(likeCount);
 
-        // 关注数和粉丝数（暂时返回0，后续实现关注功能）
-        statsVO.setFollowing(0L);
-        statsVO.setFollowers(0L);
+        // 关注数和粉丝数
+        long followingCount = followMapper.countByFollowerId(userId);
+        long followerCount = followMapper.countByFollowingId(userId);
+        statsVO.setFollowing(followingCount);
+        statsVO.setFollowers(followerCount);
 
         return ResponseVO.success(statsVO);
     }
@@ -384,7 +378,6 @@ public class UserServiceImpl implements UserService {
             }
         } catch (Exception e) {
             // 缓存读取失败，继续查询数据库
-            System.err.println("Redis缓存读取失败: " + e.getMessage());
         }
 
         // 查询数据库
@@ -408,7 +401,6 @@ public class UserServiceImpl implements UserService {
             redisTemplate.opsForValue().set(cacheKey, jsonData, RedisKeyConstant.USER_POSTS_EXPIRE, TimeUnit.MINUTES);
         } catch (Exception e) {
             // 缓存写入失败，不影响返回结果
-            System.err.println("Redis缓存写入失败: " + e.getMessage());
         }
 
         return ResponseVO.success(pageVO);

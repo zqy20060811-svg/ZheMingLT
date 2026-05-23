@@ -3,6 +3,7 @@ package com.zheminglt.impl;
 import com.zheminglt.constant.ErrorCodeConstant;
 import com.zheminglt.constant.MessageConstant;
 import com.zheminglt.mapper.CategoryMapper;
+import com.zheminglt.mapper.PostMapper;
 import com.zheminglt.model.Category;
 import com.zheminglt.service.CategoryService;
 import com.zheminglt.vo.CategoryVO;
@@ -20,6 +21,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Autowired
     private CategoryMapper categoryMapper;
 
+    @Autowired
+    private PostMapper postMapper;
+
     @Override
     public ResponseVO<List<CategoryVO>> getAllCategories() {
         List<Category> categories = categoryMapper.findAll();
@@ -27,6 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .map(category -> {
                     CategoryVO categoryVO = new CategoryVO();
                     BeanUtils.copyProperties(category, categoryVO);
+                    categoryVO.setPostCount(postMapper.countByCategoryId(category.getId()));
                     return categoryVO;
                 })
                 .collect(Collectors.toList());

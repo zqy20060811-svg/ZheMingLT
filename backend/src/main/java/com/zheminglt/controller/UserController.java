@@ -9,7 +9,6 @@ import com.zheminglt.dto.UpdateUsernameDTO;
 import com.zheminglt.service.OSSService;
 import com.zheminglt.service.TokenService;
 import com.zheminglt.service.UserService;
-import com.zheminglt.utils.JWTUtil;
 import com.zheminglt.vo.LoginVO;
 import com.zheminglt.vo.ResponseVO;
 import com.zheminglt.vo.TokenRefreshVO;
@@ -18,7 +17,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,12 +36,6 @@ public class UserController {
 
     @Autowired
     private OSSService ossService;
-
-    @Operation(summary = "测试接口", description = "测试服务是否正常运行")
-    @GetMapping("/test")
-    public ResponseVO<String> test() {
-        return ResponseVO.success("服务运行正常，时间：" + new java.util.Date());
-    }
 
     @Operation(summary = "用户注册", description = "用户注册接口，不需要手机号和邮箱验证")
     @PostMapping("/register")
@@ -130,28 +122,6 @@ public class UserController {
     @GetMapping("/{userId}/stats")
     public ResponseVO<com.zheminglt.vo.UserStatsVO> getUserStatsById(@Parameter(description = "用户ID") @PathVariable Long userId) {
         return userService.getUserStats(userId);
-    }
-
-    @Operation(summary = "获取当前登录用户信息", description = "获取当前登录用户的详细信息，需要登录")
-    @SecurityRequirement(name = "Authorization")
-    @GetMapping("/profile")
-    public ResponseVO<UserVO> getUserProfile(HttpServletRequest request) {
-        // 从请求头中获取token
-        String authorization = request.getHeader(BusinessConstant.TOKEN_HEADER);
-        if (authorization == null || !authorization.startsWith(BusinessConstant.TOKEN_PREFIX)) {
-            return ResponseVO.error(ErrorCodeConstant.CODE_UNAUTHORIZED, MessageConstant.TOKEN_EMPTY);
-        }
-        
-        String accessToken = authorization.substring(BusinessConstant.TOKEN_PREFIX.length());
-        
-        // 验证token
-        if (!JWTUtil.validateAccessToken(accessToken)) {
-            return ResponseVO.error(ErrorCodeConstant.CODE_TOKEN_EXPIRED, MessageConstant.TOKEN_EXPIRED);
-        }
-        
-        // 从token中获取userId
-        Long userId = JWTUtil.getUserIdFromAccessToken(accessToken);
-        return userService.getUserInfo(userId);
     }
 
     @Operation(summary = "上传头像", description = "上传用户头像到阿里云OSS")

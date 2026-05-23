@@ -22,12 +22,6 @@ public final class BusinessConstant {
     public static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7天
     public static final long REFRESH_TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60; // 7天（秒）
 
-    // 旧版兼容（已废弃，使用 ACCESS_TOKEN_EXPIRATION）
-    @Deprecated
-    public static final long TOKEN_EXPIRATION = ACCESS_TOKEN_EXPIRATION;
-    @Deprecated
-    public static final long TOKEN_EXPIRATION_SECONDS = ACCESS_TOKEN_EXPIRATION_SECONDS;
-
     // ==================== 用户角色 ====================
     public static final int ROLE_USER = 0;      // 普通用户
     public static final int ROLE_ADMIN = 1;     // 管理员

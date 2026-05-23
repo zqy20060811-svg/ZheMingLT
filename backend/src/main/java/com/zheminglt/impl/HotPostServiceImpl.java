@@ -14,8 +14,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -103,32 +107,34 @@ public class HotPostServiceImpl implements HotPostService {
     private ResponseVO<List<PostVO>> loadHotPostsFromDB(String key, int page, int size) {
         List<Post> posts = postMapper.findAll();
 
-        // 计算热度并排序
+        // 计算热度（带时间衰减）并排序
         List<PostVO> postVOs = posts.stream()
                 .map(post -> {
                     PostVO vo = new PostVO();
                     BeanUtils.copyProperties(post, vo);
-                    double heat = calculateHeat(
+                    double heat = calculateHeatWithDecay(
                             post.getViewCount() != null ? post.getViewCount().longValue() : 0L,
                             post.getLikeCount() != null ? post.getLikeCount().longValue() : 0L,
-                            post.getCommentCount() != null ? post.getCommentCount().longValue() : 0L
+                            post.getCommentCount() != null ? post.getCommentCount().longValue() : 0L,
+                            post.getCreatedAt()
                     );
                     vo.setHeat((int) heat);
                     return vo;
                 })
-                .sorted((a, b) -> b.getHeat().intValue() - a.getHeat().intValue())
+                .sorted((a, b) -> Double.compare(b.getHeat(), a.getHeat()))
                 .skip((page - 1) * size)
                 .limit(size)
                 .collect(Collectors.toList());
 
-        // 异步存入Redis（这里简化处理，直接存入）
+        // 存入Redis
         if (!posts.isEmpty()) {
             ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
             for (Post post : posts) {
-                double heat = calculateHeat(
+                double heat = calculateHeatWithDecay(
                         post.getViewCount() != null ? post.getViewCount().longValue() : 0L,
                         post.getLikeCount() != null ? post.getLikeCount().longValue() : 0L,
-                        post.getCommentCount() != null ? post.getCommentCount().longValue() : 0L
+                        post.getCommentCount() != null ? post.getCommentCount().longValue() : 0L,
+                        post.getCreatedAt()
                 );
                 zSetOps.add(key, String.valueOf(post.getId()), heat);
             }
@@ -145,23 +151,25 @@ public class HotPostServiceImpl implements HotPostService {
 
         ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
 
-        // 更新总榜
-        zSetOps.add(RedisKeyConstant.HOT_POSTS_ALL, String.valueOf(postId), heat);
+        // 更新总榜（7天过期）
+        String allKey = RedisKeyConstant.HOT_POSTS_ALL;
+        zSetOps.add(allKey, String.valueOf(postId), heat);
+        redisTemplate.expire(allKey, Duration.ofSeconds(7 * 24 * 60 * 60));
 
-        // 更新今日榜
+        // 更新今日榜（1天过期）
         String dayKey = RedisKeyConstant.HOT_POSTS_DAY + LocalDate.now().format(DateTimeFormatter.ISO_DATE);
         zSetOps.add(dayKey, String.valueOf(postId), heat);
-        redisTemplate.expire(dayKey, Duration.ofSeconds(2 * 24 * 60 * 60)); // 2天过期
+        redisTemplate.expire(dayKey, Duration.ofSeconds(24 * 60 * 60)); // 1天过期
 
-        // 更新本周榜
+        // 更新本周榜（7天过期）
         String weekKey = RedisKeyConstant.HOT_POSTS_WEEK + getWeekKey();
         zSetOps.add(weekKey, String.valueOf(postId), heat);
-        redisTemplate.expire(weekKey, Duration.ofSeconds(8 * 24 * 60 * 60)); // 8天过期
+        redisTemplate.expire(weekKey, Duration.ofSeconds(7 * 24 * 60 * 60)); // 7天过期
 
-        // 更新本月榜
+        // 更新本月榜（30天过期）
         String monthKey = RedisKeyConstant.HOT_POSTS_MONTH + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
         zSetOps.add(monthKey, String.valueOf(postId), heat);
-        redisTemplate.expire(monthKey, Duration.ofSeconds(32 * 24 * 60 * 60)); // 32天过期
+        redisTemplate.expire(monthKey, Duration.ofSeconds(30 * 24 * 60 * 60)); // 30天过期
     }
 
     @Override
@@ -171,6 +179,29 @@ public class HotPostServiceImpl implements HotPostService {
         double c = commentCount != null ? commentCount : 0;
 
         return v * VIEW_WEIGHT + l * LIKE_WEIGHT + c * COMMENT_WEIGHT;
+    }
+
+    /**
+     * 计算带时间衰减的热度
+     * 使用Hacker News简化算法: 热度 = 原始热度 / ((时间间隔(小时) + 2) ^ 1.5)
+     */
+    public double calculateHeatWithDecay(Long viewCount, Long likeCount, Long commentCount, Date createdAt) {
+        double baseHeat = calculateHeat(viewCount, likeCount, commentCount);
+
+        if (createdAt == null) {
+            return baseHeat;
+        }
+
+        // 计算发布时间到当前时间的小时间隔
+        LocalDateTime postTime = createdAt.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        long hours = ChronoUnit.HOURS.between(postTime, LocalDateTime.now());
+        if (hours < 0) {
+            hours = 0;
+        }
+
+        // 时间衰减公式: 热度 = 原始热度 / ((小时 + 2) ^ 1.5)
+        double decayFactor = Math.pow(hours + 2.0, 1.5);
+        return baseHeat / decayFactor;
     }
 
     /**
@@ -185,15 +216,22 @@ public class HotPostServiceImpl implements HotPostService {
 
     /**
      * 获取过期时间（秒）
+     * 缓存策略：
+     * - 日榜：1天过期，每日凌晨自动刷新
+     * - 周榜：7天过期，每周一自动刷新
+     * - 月榜：30天过期，每月1号自动刷新
+     * - 总榜：7天过期，定期刷新保证数据新鲜度
      */
     private long getExpireTime(String key) {
         if (key.startsWith(RedisKeyConstant.HOT_POSTS_DAY)) {
-            return 2 * 24 * 60 * 60; // 2天
+            return 24 * 60 * 60; // 1天
         } else if (key.startsWith(RedisKeyConstant.HOT_POSTS_WEEK)) {
-            return 8 * 24 * 60 * 60; // 8天
+            return 7 * 24 * 60 * 60; // 7天
         } else if (key.startsWith(RedisKeyConstant.HOT_POSTS_MONTH)) {
-            return 32 * 24 * 60 * 60; // 32天
+            return 30 * 24 * 60 * 60; // 30天
+        } else if (key.equals(RedisKeyConstant.HOT_POSTS_ALL)) {
+            return 7 * 24 * 60 * 60; // 7天
         }
-        return 7 * 24 * 60 * 60; // 默认7天
+        return 60 * 60; // 默认1小时
     }
 }

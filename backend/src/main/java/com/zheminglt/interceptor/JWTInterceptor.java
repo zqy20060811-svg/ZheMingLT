@@ -24,10 +24,33 @@ public class JWTInterceptor implements HandlerInterceptor {
         // 获取请求头中的AccessToken
         String authorization = request.getHeader(BusinessConstant.TOKEN_HEADER);
         
-        // 定义可选验证的路径（有token就解析，没有也不报错）
         String requestUri = request.getRequestURI();
         String method = request.getMethod();
-        boolean isOptionalAuthPath = requestUri.matches("/api/posts/\\d+") || requestUri.matches("/api/comments/post/\\d+");
+
+        // 定义完全公开的路径（不需要任何认证）
+        boolean isPublicPath = requestUri.equals("/api/users/login")
+                || requestUri.equals("/api/users/register")
+                || requestUri.equals("/api/users/refresh")
+                || requestUri.startsWith("/api/categories")
+                || requestUri.matches("/api/posts/\\d+")
+                || requestUri.matches("/api/posts/user/\\d+")
+                || (requestUri.equals("/api/posts") && "GET".equals(method))
+                || (requestUri.equals("/api/posts/hot") && "GET".equals(method))
+                || requestUri.matches("/api/comments/post/\\d+")
+                || requestUri.matches("/api/follows/\\d+/following/count")
+                || requestUri.matches("/api/follows/\\d+/followers/count")
+                || requestUri.matches("/api/users/\\d+")
+                || requestUri.matches("/api/users/\\d+/stats")
+                || requestUri.matches("/api/users/\\d+/posts")
+                || requestUri.startsWith("/swagger-ui")
+                || requestUri.startsWith("/v3/api-docs");
+        if (isPublicPath) {
+            return true;
+        }
+
+        // 定义可选验证的路径（有token就解析，没有也不报错）
+        boolean isOptionalAuthPath = requestUri.matches("/api/posts/\\d+")
+                || requestUri.matches("/api/comments/post/\\d+");
 
         if (authorization == null || !authorization.startsWith(BusinessConstant.TOKEN_PREFIX)) {
             // 如果是可选验证路径，没有token也放行

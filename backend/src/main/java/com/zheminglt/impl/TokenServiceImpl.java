@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -32,8 +31,6 @@ public class TokenServiceImpl implements TokenService {
         String key = ACCESS_TOKEN_PREFIX + token;
         // 存储到 Redis，过期时间与 JWT 一致（15 分钟）
         redisTemplate.opsForValue().set(key, userId.toString(), BusinessConstant.ACCESS_TOKEN_EXPIRATION, TimeUnit.MILLISECONDS);
-        // 更新用户Token映射
-        redisTemplate.opsForHash().put(USER_TOKEN_PREFIX + userId, "accessToken", token);
     }
 
     @Override
@@ -72,12 +69,7 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public void removeAccessToken(String token) {
         String key = ACCESS_TOKEN_PREFIX + token;
-        String userIdStr = redisTemplate.opsForValue().get(key);
-        if (userIdStr != null) {
-            redisTemplate.delete(key);
-            // 从用户Token映射中移除
-            redisTemplate.opsForHash().delete(USER_TOKEN_PREFIX + userIdStr, "accessToken");
-        }
+        redisTemplate.delete(key);
     }
 
     // ==================== RefreshToken 相关 ====================
@@ -87,8 +79,6 @@ public class TokenServiceImpl implements TokenService {
         String key = REFRESH_TOKEN_PREFIX + token;
         // 存储到 Redis，过期时间与 JWT 一致（7 天）
         redisTemplate.opsForValue().set(key, userId.toString(), BusinessConstant.REFRESH_TOKEN_EXPIRATION, TimeUnit.MILLISECONDS);
-        // 更新用户Token映射
-        redisTemplate.opsForHash().put(USER_TOKEN_PREFIX + userId, "refreshToken", token);
     }
 
     @Override
@@ -126,12 +116,7 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public void removeRefreshToken(String token) {
         String key = REFRESH_TOKEN_PREFIX + token;
-        String userIdStr = redisTemplate.opsForValue().get(key);
-        if (userIdStr != null) {
-            redisTemplate.delete(key);
-            // 从用户Token映射中移除
-            redisTemplate.opsForHash().delete(USER_TOKEN_PREFIX + userIdStr, "refreshToken");
-        }
+        redisTemplate.delete(key);
     }
 
     // ==================== Token刷新相关 ====================
@@ -146,24 +131,18 @@ public class TokenServiceImpl implements TokenService {
         // 2. 从RefreshToken中获取用户ID
         Long userId = JWTUtil.getUserIdFromRefreshToken(refreshToken);
 
-        // 3. 将旧的RefreshToken加入黑名单（实现单点登录，一个refreshToken只能用一次）
-        blacklistRefreshToken(refreshToken);
-
-        // 4. 将旧的AccessToken也加入黑名单
-        String oldAccessToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "accessToken");
-        if (oldAccessToken != null) {
-            blacklistAccessToken(oldAccessToken);
-        }
-
-        // 5. 生成新的双Token
+        // 3. 生成新的双Token
         String newAccessToken = JWTUtil.generateAccessToken(userId);
         String newRefreshToken = JWTUtil.generateRefreshToken(userId);
 
-        // 6. 存储新的Token
+        // 4. 存储新的Token
         storeAccessToken(newAccessToken, userId);
         storeRefreshToken(newRefreshToken, userId);
 
-        // 7. 返回新的Token
+        // 5. 将旧的RefreshToken加入黑名单（实现单点登录，一个refreshToken只能用一次）
+        blacklistRefreshToken(refreshToken);
+
+        // 6. 返回新的Token
         Map<String, String> result = new HashMap<>();
         result.put("accessToken", newAccessToken);
         result.put("refreshToken", newRefreshToken);
@@ -172,50 +151,6 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void invalidateAllUserTokens(Long userId) {
-        // 获取用户的所有Token并加入黑名单
-        String oldAccessToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "accessToken");
-        String oldRefreshToken = (String) redisTemplate.opsForHash().get(USER_TOKEN_PREFIX + userId, "refreshToken");
-
-        if (oldAccessToken != null) {
-            blacklistAccessToken(oldAccessToken);
-        }
-        if (oldRefreshToken != null) {
-            blacklistRefreshToken(oldRefreshToken);
-        }
-
-        // 删除用户Token映射
         redisTemplate.delete(USER_TOKEN_PREFIX + userId);
-    }
-
-    // ==================== 兼容旧版方法（已废弃） ====================
-
-    @Override
-    @Deprecated
-    public void storeToken(String token, Long userId) {
-        storeAccessToken(token, userId);
-    }
-
-    @Override
-    @Deprecated
-    public boolean isTokenValid(String token) {
-        return isAccessTokenValid(token);
-    }
-
-    @Override
-    @Deprecated
-    public void blacklistToken(String token) {
-        blacklistAccessToken(token);
-    }
-
-    @Override
-    @Deprecated
-    public boolean isTokenBlacklisted(String token) {
-        return isAccessTokenBlacklisted(token);
-    }
-
-    @Override
-    @Deprecated
-    public void removeToken(String token) {
-        removeAccessToken(token);
     }
 }

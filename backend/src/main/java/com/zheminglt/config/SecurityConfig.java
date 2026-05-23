@@ -19,14 +19,18 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .authorizeRequests(authorize -> authorize
+            .httpBasic(httpBasic -> httpBasic.disable())
+            .formLogin(formLogin -> formLogin.disable())
+            .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/", "/index.html", "/login.html", "/register.html").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/users/register", "/users/login").permitAll()
+                .requestMatchers("/api/users/register", "/api/users/login", "/api/users/refresh").permitAll()
                 // 公开帖子接口（GET请求），POST/PUT/DELETE需要JWT验证
-                .requestMatchers("/posts/hot", "/posts/{id}", "/posts/user/{userId}").permitAll()
-                .requestMatchers("/categories/**").permitAll()
-                .requestMatchers("/comments/post/{postId}").permitAll()
+                .requestMatchers("/api/posts/hot", "/api/posts/{id}", "/api/posts/user/{userId}").permitAll()
+                .requestMatchers("/api/categories/**").permitAll()
+                .requestMatchers("/api/comments/post/{postId}").permitAll()
+                .requestMatchers("/api/follows/{userId}/following/count", "/api/follows/{userId}/followers/count").permitAll()
+                .requestMatchers("/api/users/{userId}", "/api/users/{userId}/stats", "/api/users/{userId}/posts").permitAll()
                 .requestMatchers("/*.css", "/*.js").permitAll()
                 .anyRequest().permitAll()
             )
@@ -45,7 +49,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization"));
+        configuration.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization", "X-Refresh-Token"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

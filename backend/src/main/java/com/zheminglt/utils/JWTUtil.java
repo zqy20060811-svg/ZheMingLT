@@ -185,20 +185,4 @@ public class JWTUtil {
         }
     }
 
-    // ==================== 兼容旧版方法（已废弃） ====================
-
-    @Deprecated
-    public static String generateToken(Long userId) {
-        return generateAccessToken(userId);
-    }
-
-    @Deprecated
-    public static Long getUserIdFromToken(String token) {
-        return getUserIdFromAccessToken(token);
-    }
-
-    @Deprecated
-    public static boolean validateToken(String token) {
-        return validateAccessToken(token);
-    }
 }

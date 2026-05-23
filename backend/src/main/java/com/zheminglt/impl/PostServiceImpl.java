@@ -41,7 +41,7 @@ public class PostServiceImpl implements PostService {
                 redisTemplate.delete(keys);
             }
         } catch (Exception e) {
-            System.err.println("清除用户帖子缓存失败: " + e.getMessage());
+            // 缓存清除失败，不影响主流程
         }
     }
 
@@ -85,9 +85,8 @@ public class PostServiceImpl implements PostService {
             return ResponseVO.error(ErrorCodeConstant.CODE_NOT_FOUND, MessageConstant.POST_NOT_FOUND);
         }
         // 增加浏览量
-        // 暂时注释掉，避免getViewCount方法不存在的问题
-        // post.setViewCount(post.getViewCount() + 1);
-        // postMapper.save(post);
+        post.setViewCount(post.getViewCount() != null ? post.getViewCount() + 1 : 1);
+        postMapper.save(post);
         PostVO postVO = convertToVO(post);
         return ResponseVO.success(postVO);
     }
